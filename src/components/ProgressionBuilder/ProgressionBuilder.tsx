@@ -11,6 +11,7 @@ interface ProgressionBuilderProps {
 
 const FUNCTION_COLORS: Record<string, string> = {
   tonic: 'border-green-500 bg-green-500/10',
+  'tonic-substitute': 'border-emerald-500 bg-emerald-500/10',
   subdominant: 'border-blue-500 bg-blue-500/10',
   dominant: 'border-red-500 bg-red-500/10',
   predominant: 'border-amber-500 bg-amber-500/10',

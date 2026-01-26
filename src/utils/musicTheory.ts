@@ -190,24 +190,24 @@ export function createChord(
 export function getChordFunction(scaleDegree: number, mode: 'major' | 'minor'): ChordFunction {
   if (mode === 'major') {
     switch (scaleDegree) {
-      case 0: return 'tonic';       // I
-      case 1: return 'predominant'; // ii
-      case 2: return 'tonic';       // iii (tonic substitute)
-      case 3: return 'subdominant'; // IV
-      case 4: return 'dominant';    // V
-      case 5: return 'tonic';       // vi (tonic substitute)
-      case 6: return 'dominant';    // vii° (dominant function)
+      case 0: return 'tonic';            // I - the actual tonic
+      case 1: return 'predominant';      // ii
+      case 2: return 'tonic-substitute'; // iii - shares tones with I, can substitute
+      case 3: return 'subdominant';      // IV
+      case 4: return 'dominant';         // V
+      case 5: return 'tonic-substitute'; // vi - shares tones with I, can substitute
+      case 6: return 'dominant';         // vii° (dominant function)
       default: return 'tonic';
     }
   } else {
     switch (scaleDegree) {
-      case 0: return 'tonic';       // i
-      case 1: return 'predominant'; // ii°
-      case 2: return 'tonic';       // III (relative major)
-      case 3: return 'subdominant'; // iv
-      case 4: return 'dominant';    // v
-      case 5: return 'subdominant'; // VI
-      case 6: return 'subdominant'; // VII
+      case 0: return 'tonic';            // i - the actual tonic
+      case 1: return 'predominant';      // ii°
+      case 2: return 'tonic-substitute'; // III (relative major) - shares tones with i
+      case 3: return 'subdominant';      // iv
+      case 4: return 'dominant';         // v
+      case 5: return 'subdominant';      // VI
+      case 6: return 'subdominant';      // VII
       default: return 'tonic';
     }
   }

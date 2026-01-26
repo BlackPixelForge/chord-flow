@@ -123,6 +123,7 @@ function ChordFunctionIndicator({ function: fn }: ChordFunctionIndicatorProps) {
   // Simple visual showing where this chord fits in the tonic-subdominant-dominant flow
   const positions: Record<ChordFunction, number> = {
     tonic: 0,
+    'tonic-substitute': 0.3, // Near tonic but slightly away
     subdominant: 1,
     predominant: 1,
     dominant: 2,

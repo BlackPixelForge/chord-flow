@@ -50,24 +50,38 @@ function getChordTheoryExplanation(
   // Generate explanations based on chord function
   switch (fn) {
     case 'tonic':
-      title = detailLevel === 'beginner' ? 'Home Base' : 'Tonic Function';
+      title = detailLevel === 'beginner' ? 'Home Base' : 'Tonic';
       if (detailLevel === 'beginner') {
         explanation = position === 0
-          ? `We start on ${chord.name}, the "home" chord. This is where the song feels most stable and resolved.`
+          ? `We start on ${chord.name}, the "home" chord. This IS the tonal center - where the song feels most stable.`
           : position === totalChords - 1
-            ? `We return home to ${chord.name}. The progression resolves, creating a satisfying ending.`
-            : `${chord.name} provides a moment of rest and stability in the middle of the progression.`;
-        circleRelation = 'This chord sits at the center of our key - the point everything revolves around.';
+            ? `We return home to ${chord.name}. The progression resolves to the tonal center.`
+            : `${chord.name} is the tonal center, providing maximum stability and resolution.`;
+        circleRelation = 'This IS the center of our key - the tonic that everything else relates to.';
       } else if (detailLevel === 'intermediate') {
-        explanation = `${chord.name} (${chord.romanNumeral || 'I'}) is the tonic - the gravitational center of the key. ${
+        explanation = `${chord.name} (${chord.romanNumeral || 'I'}) is THE tonic - the actual tonal center of the key. ${
           position === 0 ? 'Starting here establishes our tonal home.' :
-          position === totalChords - 1 ? 'Ending here provides resolution and closure.' :
-          'It provides stability between moments of tension.'
+          position === totalChords - 1 ? 'Ending here provides complete resolution.' :
+          'It provides maximum stability as the true center of the key.'
         }`;
-        circleRelation = `On the circle, the tonic is our reference point. All other chords are measured by their distance from here.`;
+        circleRelation = `The tonic sits at position 0 - all other chords are measured by their distance from this center.`;
       } else {
-        explanation = `${chord.name} (${chord.romanNumeral || 'I'}) serves the tonic function, establishing ${songKey.tonic} ${songKey.mode} as our tonal center. The tonic contains scale degrees 1, 3, and 5, providing maximum stability.`;
-        circleRelation = `Position 0 on the circle. The tonic is the axis around which the circle of fifths relationship operates.`;
+        explanation = `${chord.name} (${chord.romanNumeral || 'I'}) IS the tonic, establishing ${songKey.tonic} ${songKey.mode} as our tonal center. Contains scale degrees 1, 3, and 5, providing maximum stability and the ultimate point of resolution.`;
+        circleRelation = `Position 0 on the circle. The tonic is the axis around which all harmonic relationships operate.`;
+      }
+      break;
+
+    case 'tonic-substitute':
+      title = detailLevel === 'beginner' ? 'Near Home' : 'Tonic Substitute';
+      if (detailLevel === 'beginner') {
+        explanation = `${chord.name} shares notes with the home chord, so it feels stable but with a different color. It's like being in a room next to home.`;
+        circleRelation = 'This chord is closely related to the tonic but is NOT the actual center of the key.';
+      } else if (detailLevel === 'intermediate') {
+        explanation = `${chord.name} (${chord.romanNumeral || 'vi'}) is a tonic substitute - it shares two notes with the tonic triad and can stand in for it, but is not the actual tonal center. It provides stability with added color.`;
+        circleRelation = `Adjacent to the tonic on the circle. The vi chord (relative minor) is 3 positions counter-clockwise from I.`;
+      } else {
+        explanation = `${chord.name} (${chord.romanNumeral || 'vi'}) functions as a tonic substitute due to shared tones with the tonic triad. The vi shares scale degrees 1 and 3 with I, allowing it to resolve dominant tension (V→vi deceptive cadence) while providing modal color.`;
+        circleRelation = `The relative minor (vi) sits 3 positions counter-clockwise, sharing the same key signature. It can substitute for tonic but doesn't provide the same definitive resolution.`;
       }
       break;
 
@@ -597,6 +611,7 @@ function KeyLabel({ note, mode, angle, radius, center, isCurrentKey, isHighlight
 function ChordFunctionBadge({ function: fn }: { function?: ChordFunction }) {
   const colors: Record<ChordFunction | 'default', string> = {
     tonic: 'bg-green-500/20 text-green-400 border-green-500/30',
+    'tonic-substitute': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
     subdominant: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     dominant: 'bg-red-500/20 text-red-400 border-red-500/30',
     predominant: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
@@ -606,6 +621,7 @@ function ChordFunctionBadge({ function: fn }: { function?: ChordFunction }) {
 
   const labels: Record<ChordFunction | 'default', string> = {
     tonic: 'Tonic',
+    'tonic-substitute': 'Near Home',
     subdominant: 'Subdominant',
     dominant: 'Dominant',
     predominant: 'Predominant',

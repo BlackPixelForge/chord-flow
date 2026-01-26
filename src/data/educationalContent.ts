@@ -14,17 +14,33 @@ export const CHORD_FUNCTION_CONTENT: Record<ChordFunction, ChordFunctionExplanat
   tonic: {
     beginner: {
       name: 'Home',
-      description: 'This chord feels like home. The song wants to end here.',
+      description: 'This IS home - the tonal center. The song feels most stable and resolved here.',
     },
     intermediate: {
       name: 'Tonic (I/i)',
-      description: 'The "home base" chord of the key. Creates stability and resolution.',
-      romanNumerals: 'Usually I in major keys, i in minor keys',
+      description: 'THE home chord of the key - the actual tonal center. Maximum stability and resolution.',
+      romanNumerals: 'I in major keys, i in minor keys',
     },
     advanced: {
-      name: 'Tonic Function',
-      description: 'Establishes tonal center. Contains the tonic note as root. Provides resolution for dominant chords.',
-      theory: 'In functional harmony, tonic chords (I, vi, iii) resolve tension. The I chord is the strongest tonic, while vi and iii have weaker tonic function due to shared tones.',
+      name: 'Tonic',
+      description: 'The tonal center. Contains the tonic note as root, 3rd, and 5th of the scale. All harmonic tension ultimately resolves here.',
+      theory: 'The tonic (I/i) is the gravitational center of tonal music. It establishes the key and provides the ultimate point of resolution. All other harmonic functions are defined by their relationship to the tonic.',
+    },
+  },
+  'tonic-substitute': {
+    beginner: {
+      name: 'Near Home',
+      description: 'This chord shares notes with home, creating a similar stable feeling but with more color.',
+    },
+    intermediate: {
+      name: 'Tonic Substitute (vi/iii)',
+      description: 'Shares tones with the tonic and can substitute for it, but is not the actual tonal center.',
+      romanNumerals: 'vi or iii in major keys, III in minor keys',
+    },
+    advanced: {
+      name: 'Tonic Substitute',
+      description: 'Shares two of three tones with the tonic triad, allowing it to function similarly but with different color.',
+      theory: 'The vi chord shares scale degrees 1 and 3 with I; iii shares 3 and 5. This overlap allows them to substitute for tonic function in deceptive cadences (V→vi) or mediant motion, while providing modal color. They resolve tension but not as definitively as I.',
     },
   },
   subdominant: {
@@ -347,6 +363,7 @@ export function getDetailLevelLabel(level: DetailLevel): string {
 export function getChordFunctionColor(fn: ChordFunction | undefined): string {
   switch (fn) {
     case 'tonic': return 'text-green-400 bg-green-500/20';
+    case 'tonic-substitute': return 'text-emerald-400 bg-emerald-500/20';
     case 'subdominant': return 'text-amber-400 bg-amber-500/20';
     case 'dominant': return 'text-red-400 bg-red-500/20';
     case 'predominant': return 'text-yellow-400 bg-yellow-500/20';

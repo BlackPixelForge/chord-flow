@@ -34,7 +34,7 @@ export type RomanNumeral =
   | 'bII' | 'bIII' | 'bVI' | 'bVII';
 
 // Chord function in harmonic context
-export type ChordFunction = 'tonic' | 'subdominant' | 'dominant' | 'predominant' | 'borrowed';
+export type ChordFunction = 'tonic' | 'tonic-substitute' | 'subdominant' | 'dominant' | 'predominant' | 'borrowed';
 
 // Core chord interface
 export interface Chord {

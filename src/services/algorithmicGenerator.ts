@@ -9,11 +9,13 @@ import type {
   SectionType,
   AIGenerationRequest,
   MoodAnalysis,
+  RomanNumeral,
 } from '../types/music';
 import {
   getDiatonicChords,
   createChord,
   getKeyId,
+  getChordFunction,
 } from '../utils/musicTheory';
 
 // ============================================================================
@@ -1619,6 +1621,42 @@ function selectNamedProgression(
   return pickRandom(candidates, random);
 }
 
+// Get roman numeral based on scale degree and chord quality
+function getRomanNumeral(degree: number, quality: ChordQuality, mode: 'major' | 'minor'): RomanNumeral {
+  // Map of scale degrees (1-7) to roman numerals
+  const majorNumerals: Record<number, RomanNumeral> = {
+    1: 'I', 2: 'ii', 3: 'iii', 4: 'IV', 5: 'V', 6: 'vi', 7: 'vii°'
+  };
+  const minorNumerals: Record<number, RomanNumeral> = {
+    1: 'i', 2: 'ii°', 3: 'III', 4: 'iv', 5: 'v', 6: 'VI', 7: 'VII'
+  };
+
+  // Handle borrowed/chromatic chords (bVII, bVI, bIII, etc.)
+  const isMajorQuality = quality === 'major' || quality === 'major7' || quality === 'dominant7';
+  const isDiminished = quality === 'diminished' || quality === 'dim7' || quality === 'half-dim7';
+
+  // Get base numeral
+  let numeral = mode === 'major' ? majorNumerals[degree] : minorNumerals[degree];
+
+  // Override based on explicit quality if it differs from diatonic
+  if (mode === 'major') {
+    // In major: adjust for borrowed chords
+    if (degree === 7 && isMajorQuality) numeral = 'bVII';
+    if (degree === 6 && isMajorQuality) numeral = 'bVI';
+    if (degree === 3 && isMajorQuality) numeral = 'bIII';
+  } else {
+    // In minor: degrees 6 and 7 are naturally flat, adjust for raised versions
+    if (degree === 5 && isMajorQuality) numeral = 'V'; // Raised 7th for dominant V
+  }
+
+  // Handle diminished explicitly
+  if (isDiminished && !numeral.includes('°')) {
+    numeral = (numeral.toLowerCase() + '°') as RomanNumeral;
+  }
+
+  return numeral || 'I';
+}
+
 // Build chords from a named progression
 function buildChordsFromPattern(
   pattern: NamedProgression,
@@ -1640,7 +1678,7 @@ function buildChordsFromPattern(
   for (let i = 0; i < Math.min(pattern.degrees.length, length); i++) {
     const degree = pattern.degrees[i];
     const qualityHint = pattern.qualities[i];
-    const root = scaleNotes[degree - 1];
+    const root = scaleNotes[(degree - 1) % 7]; // Wrap around for degrees > 7
 
     let quality: ChordQuality;
     if (qualityHint === 'diatonic') {
@@ -1659,7 +1697,13 @@ function buildChordsFromPattern(
       }
     }
 
-    const chord = createChord(root, quality, undefined, undefined, keyContext);
+    // Get the chord function based on scale degree (0-indexed for getChordFunction)
+    const chordFunction = getChordFunction((degree - 1) % 7, key.mode);
+
+    // Get the roman numeral
+    const romanNumeral = getRomanNumeral(degree, quality, key.mode);
+
+    const chord = createChord(root, quality, romanNumeral, chordFunction, keyContext);
     chords.push(chord);
   }
 

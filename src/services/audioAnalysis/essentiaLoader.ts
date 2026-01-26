@@ -121,8 +121,11 @@ export async function getEssentia(): Promise<EssentiaInstance> {
  */
 async function loadEssentiaModule(): Promise<EssentiaInstance> {
   try {
-    // Dynamic import for code splitting
-    const { Essentia, EssentiaWASM } = await import('essentia.js');
+    // Import the ES module versions for browser compatibility
+    const [{ default: Essentia }, { default: EssentiaWASM }] = await Promise.all([
+      import('essentia.js/dist/essentia.js-core.es.js'),
+      import('essentia.js/dist/essentia-wasm.es.js'),
+    ]);
 
     // Load the WASM module
     const wasmModule = await EssentiaWASM();
@@ -132,6 +135,7 @@ async function loadEssentiaModule(): Promise<EssentiaInstance> {
 
     return instance;
   } catch (error) {
+    console.error('Essentia.js load error:', error);
     const analysisError: AnalysisError = {
       type: 'essentia_load_failed',
       message: 'Failed to load audio analysis engine',

@@ -5,8 +5,19 @@
  * This provides basic type coverage for the APIs we use.
  */
 
-declare module 'essentia.js' {
-  export class Essentia {
+// Core Essentia class
+declare module 'essentia.js/dist/essentia.js-core.es.js' {
+  export interface EssentiaVector {
+    size(): number;
+    get(index: number): number;
+    delete(): void;
+  }
+
+  export interface EssentiaWASMModule {
+    // WASM module interface
+  }
+
+  export default class Essentia {
     constructor(wasmModule: EssentiaWASMModule);
 
     arrayToVector(arr: Float32Array): EssentiaVector;
@@ -55,16 +66,13 @@ declare module 'essentia.js' {
 
     delete(): void;
   }
+}
 
-  export interface EssentiaVector {
-    size(): number;
-    get(index: number): number;
-    delete(): void;
-  }
-
+// WASM loader
+declare module 'essentia.js/dist/essentia-wasm.es.js' {
   export interface EssentiaWASMModule {
     // WASM module interface
   }
 
-  export function EssentiaWASM(): Promise<EssentiaWASMModule>;
+  export default function EssentiaWASM(): Promise<EssentiaWASMModule>;
 }

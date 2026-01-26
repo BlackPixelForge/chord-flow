@@ -10,9 +10,10 @@ import { ProgressionBuilder } from './components/ProgressionBuilder/ProgressionB
 import { PlaybackControls } from './components/PlaybackControls/PlaybackControls';
 import { CustomMoodInput, type GenerationOptions } from './components/CustomMoodInput/CustomMoodInput';
 import { SongView } from './components/SongView/SongView';
+import { AudioAnalyzerPage } from './components/AudioAnalyzer';
 import { useChordAudio } from './hooks/useChordAudio';
 
-type ViewMode = 'preset' | 'custom';
+type ViewMode = 'preset' | 'custom' | 'analyze';
 
 function App() {
   // State
@@ -219,6 +220,16 @@ function App() {
           >
             Custom Mood
           </button>
+          <button
+            onClick={() => setViewMode('analyze')}
+            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-medium transition-all
+              ${viewMode === 'analyze'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+          >
+            Analyze Song
+          </button>
         </div>
 
         {/* Controls section */}
@@ -241,7 +252,7 @@ function App() {
             {/* Mood selector */}
             <MoodSelector selectedMood={selectedMood} onMoodSelect={handleMoodSelect} />
           </section>
-        ) : (
+        ) : viewMode === 'custom' ? (
           <section className="mb-8 space-y-6">
             {/* Key selector for custom mode - shown collapsed for manual override */}
             <details className="group">
@@ -269,9 +280,12 @@ function App() {
               </div>
             )}
           </section>
-        )}
+        ) : null}
 
         {/* Content section */}
+        {viewMode === 'analyze' ? (
+          <AudioAnalyzerPage />
+        ) : (
         <section>
           {song ? (
             // Display multi-section song
@@ -310,23 +324,26 @@ function App() {
             </div>
           )}
         </section>
+        )}
       </main>
 
-      {/* Fixed playback controls */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-700 p-4">
-        <div className="max-w-6xl mx-auto">
-          <PlaybackControls
-            isPlaying={audioState.isPlaying}
-            tempo={tempo}
-            isLooping={isLooping}
-            isAudioReady={audioState.isReady}
-            onPlay={handlePlay}
-            onStop={stopPlayback}
-            onTempoChange={handleTempoChange}
-            onLoopToggle={handleLoopToggle}
-          />
-        </div>
-      </footer>
+      {/* Fixed playback controls (hidden in analyze mode) */}
+      {viewMode !== 'analyze' && (
+        <footer className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-700 p-4">
+          <div className="max-w-6xl mx-auto">
+            <PlaybackControls
+              isPlaying={audioState.isPlaying}
+              tempo={tempo}
+              isLooping={isLooping}
+              isAudioReady={audioState.isReady}
+              onPlay={handlePlay}
+              onStop={stopPlayback}
+              onTempoChange={handleTempoChange}
+              onLoopToggle={handleLoopToggle}
+            />
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

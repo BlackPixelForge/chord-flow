@@ -225,6 +225,93 @@ export const TENSION_CONTENT: Record<'low' | 'medium' | 'high', TraitExplanation
 };
 
 // ============================================================================
+// CHORD EXTENSION EXPLANATIONS (per-chord context)
+// ============================================================================
+
+import type { ChordQuality } from '../types/music';
+
+export interface ExtensionExplanation {
+  badge: string;
+  beginner: string;
+  intermediate: string;
+  advanced: string;
+}
+
+export const CHORD_EXTENSION_CONTENT: Partial<Record<ChordQuality, ExtensionExplanation>> = {
+  major7: {
+    badge: 'maj7',
+    beginner: 'The added 7th gives this chord a dreamy, sophisticated quality.',
+    intermediate: 'The major 7th (one half-step below the root) adds a lush, jazzy color while maintaining the chord\'s stable character.',
+    advanced: 'The major 7th interval creates a mild dissonance that adds color without destabilizing the chord. Common in jazz, neo-soul, and sophisticated pop.',
+  },
+  minor7: {
+    badge: 'm7',
+    beginner: 'The added 7th makes this minor chord sound smoother and jazzier.',
+    intermediate: 'The minor 7th softens the chord, making it feel less final and more flowing. Essential in jazz and R&B.',
+    advanced: 'The minor 7th (b7) extends the minor triad, creating the quintessential jazz minor sound. Often functions as ii7 in ii-V-I progressions.',
+  },
+  dominant7: {
+    badge: '7',
+    beginner: 'The added 7th creates tension that wants to resolve - like a question waiting for an answer.',
+    intermediate: 'The dominant 7th contains a tritone (between the 3rd and 7th) that creates strong pull toward resolution.',
+    advanced: 'The dominant 7th\'s tritone (between scale degrees 7 and 4) is the engine of tonal harmony. It resolves naturally to the tonic by half-step motion.',
+  },
+  dim7: {
+    badge: 'dim7',
+    beginner: 'This tense, mysterious chord has an extra note that makes it even more dramatic.',
+    intermediate: 'The diminished 7th is fully symmetric - all intervals are minor 3rds. This creates maximum tension and ambiguity.',
+    advanced: 'Diminished 7th chords are enharmonically respellable and can resolve to any of 4 different keys, making them powerful pivot chords for modulation.',
+  },
+  'half-dim7': {
+    badge: 'm7♭5',
+    beginner: 'This chord has a dark, unresolved quality - often used before tension chords.',
+    intermediate: 'Half-diminished (m7♭5) is the natural ii chord in minor keys. It sets up the V7 beautifully in minor ii-V-i.',
+    advanced: 'The half-diminished 7th differs from fully diminished by having a minor 7th instead of diminished 7th. Essential as iiø7 in minor key ii-V-i progressions.',
+  },
+  sus2: {
+    badge: 'sus2',
+    beginner: 'The 3rd is replaced with the 2nd, creating an open, airy sound.',
+    intermediate: 'Suspended 2nd chords remove the major/minor quality, creating ambiguity. They often resolve to the regular chord.',
+    advanced: 'Sus2 replaces the 3rd with the 2nd (9th down an octave). Unlike traditional suspensions, modern usage often treats sus2 as a color chord without resolution.',
+  },
+  sus4: {
+    badge: 'sus4',
+    beginner: 'The 3rd is replaced with the 4th, creating a hanging, unresolved feeling.',
+    intermediate: 'Suspended 4th chords traditionally resolve down to the 3rd. The 4th creates tension against the 5th.',
+    advanced: 'The sus4 is the classic suspension from counterpoint - the 4th is a dissonance against the 5th that resolves stepwise to the 3rd. In modern music, often left unresolved.',
+  },
+  add9: {
+    badge: 'add9',
+    beginner: 'An extra high note is added, making the chord sparkle and sound fuller.',
+    intermediate: 'Add9 includes the 9th (2nd up an octave) without the 7th. It adds color while keeping the chord\'s basic character.',
+    advanced: 'Unlike a 9th chord which includes the 7th, add9 stacks the 9th directly on the triad. Common in pop, rock, and worship music for added shimmer.',
+  },
+  power: {
+    badge: '5',
+    beginner: 'Only the root and 5th - no 3rd. This makes the chord heavy and neutral.',
+    intermediate: 'Power chords omit the 3rd, removing major/minor quality. Works great with distortion in rock and metal.',
+    advanced: 'The absence of the 3rd creates a harmonically ambiguous sound that works well with distortion (which would turn the 3rd into dissonant overtones).',
+  },
+  augmented: {
+    badge: 'aug',
+    beginner: 'The top note is raised, creating an unsettled, dreamy feeling.',
+    intermediate: 'Augmented chords have a raised 5th, creating tension that typically resolves up by half-step.',
+    advanced: 'Augmented triads are symmetric (all major 3rds) and can resolve to multiple keys. Often used as V+ resolving to I with the raised 5th becoming the 3rd.',
+  },
+  diminished: {
+    badge: 'dim',
+    beginner: 'A tense, unstable chord that really wants to move somewhere else.',
+    intermediate: 'Diminished chords have a lowered 5th, creating a tritone with the root. They often function as leading-tone chords (vii°).',
+    advanced: 'The diminished triad contains a tritone between root and ♭5. As vii°, it shares two notes with V7 and has dominant function.',
+  },
+};
+
+// Helper to get extension explanation for a chord quality
+export function getExtensionExplanation(quality: ChordQuality): ExtensionExplanation | null {
+  return CHORD_EXTENSION_CONTENT[quality] || null;
+}
+
+// ============================================================================
 // CHORD FEATURE EXPLANATIONS
 // ============================================================================
 

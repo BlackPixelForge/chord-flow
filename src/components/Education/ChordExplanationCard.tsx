@@ -3,6 +3,7 @@ import type { Chord, Key, DetailLevel, ChordFunction } from '../../types/music';
 import {
   CHORD_FUNCTION_CONTENT,
   getChordFunctionColor,
+  getExtensionExplanation,
 } from '../../data/educationalContent';
 
 interface ChordExplanationCardProps {
@@ -27,6 +28,10 @@ export function ChordExplanationCard({
   const functionContent = CHORD_FUNCTION_CONTENT[chordFunction];
   const colorClass = getChordFunctionColor(chordFunction);
 
+  // Get extension explanation if this chord has extensions (7ths, sus, etc.)
+  const extensionExplanation = getExtensionExplanation(chord.quality);
+  const hasExtension = extensionExplanation !== null && chord.quality !== 'major' && chord.quality !== 'minor';
+
   // Get content based on detail level
   const getContent = () => {
     switch (detailLevel) {
@@ -36,6 +41,18 @@ export function ChordExplanationCard({
         return functionContent.intermediate;
       case 'advanced':
         return functionContent.advanced;
+    }
+  };
+
+  const getExtensionContent = () => {
+    if (!extensionExplanation) return null;
+    switch (detailLevel) {
+      case 'beginner':
+        return extensionExplanation.beginner;
+      case 'intermediate':
+        return extensionExplanation.intermediate;
+      case 'advanced':
+        return extensionExplanation.advanced;
     }
   };
 
@@ -71,6 +88,18 @@ export function ChordExplanationCard({
       <p className="mt-2 text-sm text-slate-400">
         {content.description}
       </p>
+
+      {/* Extension explanation (if chord has 7ths, sus, etc.) */}
+      {hasExtension && extensionExplanation && (
+        <div className="mt-2 flex items-start gap-2">
+          <span className="px-1.5 py-0.5 text-xs font-medium bg-indigo-500/20 text-indigo-300 rounded shrink-0">
+            {extensionExplanation.badge}
+          </span>
+          <p className="text-sm text-indigo-300/80">
+            {getExtensionContent()}
+          </p>
+        </div>
+      )}
 
       {/* Expanded content */}
       {isExpanded && (

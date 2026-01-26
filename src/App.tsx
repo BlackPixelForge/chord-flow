@@ -217,7 +217,7 @@ function App() {
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
           >
-            Custom Mood (AI)
+            Custom Mood
           </button>
         </div>
 

@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/* Custom CSS variables for the app */
+:root {
+  --color-tonic: #22c55e;
+  --color-subdominant: #3b82f6;
+  --color-dominant: #ef4444;
+  --color-predominant: #f59e0b;
+  --color-borrowed: #8b5cf6;
+}
+
+/* Base styles */
+body {
+  @apply bg-slate-900 text-slate-100 min-h-screen;
+}
+
+/* Ensure touch targets are accessible */
+.touch-target {
+  @apply min-w-[44px] min-h-[44px];
+}

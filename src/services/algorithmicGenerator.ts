@@ -55,6 +55,9 @@ const TRAITS = {
   colorful: { useBorrowedChords: true },
   suspended: { useSuspensions: true },
   extended: { useSevenths: true },
+  inversions: { useInversions: true },
+  pedalBass: { pedalBassChance: 0.4 },
+  smoothBass: { useInversions: true, pedalBassChance: 0.2 },
 
   // Tempo presets
   verySlow: { tempoRange: { min: 40, max: 60 } },
@@ -318,8 +321,8 @@ const MOOD_KEYWORDS: Record<string, Partial<MoodAnalysis>> = {
   sleepy: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.lowTension, ...TRAITS.verySlow },
   drowsy: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.lowTension, ...TRAITS.verySlow },
   lullaby: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.lowTension, ...TRAITS.verySlow },
-  dreamy: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.neutral, ...TRAITS.extended, ...TRAITS.suspended },
-  dreamlike: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.neutral, ...TRAITS.extended, ...TRAITS.suspended },
+  dreamy: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.neutral, ...TRAITS.extended, ...TRAITS.suspended, ...TRAITS.smoothBass },
+  dreamlike: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.neutral, ...TRAITS.extended, ...TRAITS.suspended, ...TRAITS.smoothBass },
   hazy: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.neutral, ...TRAITS.suspended },
   lazy: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.lowTension, ...TRAITS.slow },
   easy: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.lowTension },
@@ -439,7 +442,7 @@ const MOOD_KEYWORDS: Record<string, Partial<MoodAnalysis>> = {
   mystery: { ...TRAITS.minorMode, ...TRAITS.mediumTension, ...TRAITS.extended },
   enigmatic: { ...TRAITS.minorMode, ...TRAITS.mediumTension, ...TRAITS.extended },
   enigma: { ...TRAITS.minorMode, ...TRAITS.mediumTension, ...TRAITS.extended },
-  ethereal: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.extended, ...TRAITS.suspended },
+  ethereal: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.extended, ...TRAITS.suspended, ...TRAITS.inversions },
   otherworldly: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.extended, ...TRAITS.suspended },
   celestial: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.extended, ...TRAITS.bright },
   heavenly: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.bright },
@@ -467,10 +470,10 @@ const MOOD_KEYWORDS: Record<string, Partial<MoodAnalysis>> = {
   underwater: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.suspended },
   floating: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.extended },
   weightless: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.suspended },
-  ambient: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.lowTension, ...TRAITS.extended },
-  atmospheric: { ...TRAITS.lowEnergy, ...TRAITS.extended },
-  cinematic: { ...TRAITS.minorMode, ...TRAITS.mediumEnergy, ...TRAITS.colorful, ...TRAITS.extended },
-  filmscore: { ...TRAITS.minorMode, ...TRAITS.mediumEnergy, ...TRAITS.colorful, ...TRAITS.extended },
+  ambient: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.lowTension, ...TRAITS.extended, ...TRAITS.inversions },
+  atmospheric: { ...TRAITS.lowEnergy, ...TRAITS.extended, ...TRAITS.smoothBass },
+  cinematic: { ...TRAITS.minorMode, ...TRAITS.mediumEnergy, ...TRAITS.colorful, ...TRAITS.extended, ...TRAITS.pedalBass },
+  filmscore: { ...TRAITS.minorMode, ...TRAITS.mediumEnergy, ...TRAITS.colorful, ...TRAITS.extended, ...TRAITS.pedalBass },
   soundtrack: { ...TRAITS.mediumEnergy, ...TRAITS.colorful },
 
   // =========================================================================
@@ -990,6 +993,8 @@ function analyzeMood(moodText: string): MoodAnalysis {
     useSevenths: false,
     useBorrowedChords: false,
     useSuspensions: false,
+    useInversions: false,
+    pedalBassChance: 0,
     preferredFunctions: ['tonic', 'subdominant', 'dominant'],
     positivity: 0,
     intensity: 0.5,
@@ -1732,6 +1737,120 @@ function getMinorScaleNotes(tonic: CanonicalNote): CanonicalNote[] {
   return minorIntervals.map(interval => allNotes[(tonicIndex + interval) % 12]);
 }
 
+// ============================================================================
+// INVERSIONS AND BASS LINE PROCESSING
+// ============================================================================
+
+/**
+ * Create an inversion of a chord by setting the bass note to the 3rd or 5th
+ * Returns a new chord with the bassNote property set
+ */
+function createInversion(
+  chord: Chord,
+  inversionType: '1st' | '2nd'
+): Chord {
+  const notes = chord.notes;
+  if (notes.length < 3) {
+    return chord; // Can't invert power chords or dyads meaningfully
+  }
+
+  // 1st inversion: 3rd in bass, 2nd inversion: 5th in bass
+  const bassNoteIndex = inversionType === '1st' ? 1 : 2;
+  const bassNote = notes[bassNoteIndex];
+
+  if (!bassNote) {
+    return chord;
+  }
+
+  // Create new chord with bass note - use the createChord function for proper naming
+  return {
+    ...chord,
+    bassNote,
+    name: chord.name + '/' + bassNote,
+  };
+}
+
+/**
+ * Apply random inversions to a progression based on mood settings
+ * Adds smooth bass line movement through strategic inversions
+ */
+function applyInversions(
+  progression: Chord[],
+  analysis: MoodAnalysis,
+  random: () => number
+): Chord[] {
+  if (!analysis.useInversions || progression.length < 2) {
+    return progression;
+  }
+
+  const inversionChance = 0.18; // ~18% chance per eligible chord
+
+  return progression.map((chord, index) => {
+    // Don't invert first or last chord (keep strong root position)
+    if (index === 0 || index === progression.length - 1) {
+      return chord;
+    }
+
+    // Random chance to invert
+    if (random() > inversionChance) {
+      return chord;
+    }
+
+    // Prefer 1st inversions (3rd in bass) for smoother sound
+    const inversionType = random() > 0.3 ? '1st' : '2nd';
+    return createInversion(chord, inversionType);
+  });
+}
+
+/**
+ * Apply pedal bass to a progression - keeps the same bass note across multiple chords
+ * Common in cinematic music for creating tension and continuity
+ */
+function applyPedalBass(
+  progression: Chord[],
+  analysis: MoodAnalysis,
+  key: Key,
+  random: () => number
+): Chord[] {
+  if (analysis.pedalBassChance <= 0 || progression.length < 3) {
+    return progression;
+  }
+
+  // Decide if we should apply pedal bass to this progression
+  if (random() > analysis.pedalBassChance) {
+    return progression;
+  }
+
+  const result = [...progression];
+
+  // Pedal note is usually the tonic or dominant
+  const pedalNote = random() > 0.7
+    ? progression[0].notes[2] // 5th of first chord (dominant pedal)
+    : key.tonic; // Tonic pedal (most common)
+
+  // Apply pedal to a contiguous section (2-4 chords)
+  const pedalLength = 2 + Math.floor(random() * 3); // 2, 3, or 4 chords
+  const startIndex = Math.floor(random() * Math.max(1, progression.length - pedalLength));
+
+  for (let i = startIndex; i < Math.min(startIndex + pedalLength, progression.length); i++) {
+    const chord = result[i];
+    // Only apply pedal if the note exists in the chord (sounds consonant)
+    // or if it's the root of the first chord (tonic pedal always works)
+    const noteExistsInChord = chord.notes.includes(pedalNote as CanonicalNote);
+    const isTonic = pedalNote === key.tonic;
+
+    if (noteExistsInChord || isTonic) {
+      result[i] = {
+        ...chord,
+        bassNote: pedalNote as CanonicalNote,
+        name: chord.root === pedalNote ? chord.name : chord.name + '/' + pedalNote,
+      };
+    }
+  }
+
+  return result;
+}
+
 // Generate a chord progression for a section
 function generateProgression(
   key: Key,
@@ -2061,6 +2180,16 @@ export function generateAlgorithmicSong(request: AIGenerationRequest): Song {
       chords = [...existingSection.chords];
     } else {
       chords = generateProgression(key, chordCount, analysis, complexity, template.type, random);
+
+      // Apply inversions for smoother bass movement (dreamy, ethereal, ambient moods)
+      if (analysis.useInversions && complexity !== 'simple') {
+        chords = applyInversions(chords, analysis, random);
+      }
+
+      // Apply pedal bass for cinematic effect
+      if (analysis.pedalBassChance > 0 && complexity !== 'simple') {
+        chords = applyPedalBass(chords, analysis, key, random);
+      }
     }
 
     acc.push({
@@ -2138,6 +2267,12 @@ function buildDescription(analysis: MoodAnalysis, complexity: string, key: Key):
   }
   if (analysis.useSuspensions) {
     chordFeatures.push('suspended chords');
+  }
+  if (analysis.useInversions) {
+    chordFeatures.push('slash chords/inversions');
+  }
+  if (analysis.pedalBassChance > 0) {
+    chordFeatures.push('pedal bass');
   }
 
   if (chordFeatures.length > 0) {

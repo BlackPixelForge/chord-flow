@@ -206,6 +206,85 @@ function findFretForNote(note: NoteName, stringIndex: number): number | null {
 }
 
 /**
+ * Get the note played on a specific string at a specific fret
+ */
+function getNoteOnString(stringIndex: number, fret: number): CanonicalNote | null {
+  if (fret < 0 || fret > 12 || stringIndex < 0 || stringIndex > 5) {
+    return null;
+  }
+  return STRING_NOTES[stringIndex][fret];
+}
+
+/**
+ * Find the lowest string index (0 = low E) that plays a specific note in a fingering
+ */
+function findLowestStringWithNote(
+  fingering: GuitarFingering,
+  targetNote: NoteName
+): number {
+  const normalizedTarget = normalizeNoteName(targetNote);
+
+  for (let stringIndex = 0; stringIndex < 6; stringIndex++) {
+    const fret = fingering.strings[stringIndex];
+    if (fret === 'x') continue;
+
+    const note = getNoteOnString(stringIndex, fret as number);
+    if (note === normalizedTarget) {
+      return stringIndex;
+    }
+  }
+
+  return -1; // Note not found in fingering
+}
+
+/**
+ * Adjust a fingering to have the specified bass note as the lowest sounding note.
+ * Mutes strings below the bass note position.
+ * Returns null if the bass note doesn't exist in the fingering.
+ */
+function adjustFingeringForBass(
+  fingering: GuitarFingering,
+  bassNote: NoteName
+): GuitarFingering | null {
+  const bassStringIndex = findLowestStringWithNote(fingering, bassNote);
+
+  if (bassStringIndex === -1) {
+    // Bass note not found in this fingering
+    return null;
+  }
+
+  // If bass note is already on the lowest played string, no adjustment needed
+  let lowestPlayedString = -1;
+  for (let i = 0; i < 6; i++) {
+    if (fingering.strings[i] !== 'x') {
+      lowestPlayedString = i;
+      break;
+    }
+  }
+
+  if (lowestPlayedString === bassStringIndex) {
+    return fingering; // Already correct
+  }
+
+  // Create adjusted fingering with muted lower strings
+  const adjustedStrings = [...fingering.strings] as (number | 'x' | 0)[];
+  const adjustedFingers = fingering.fingers ? [...fingering.fingers] : undefined;
+
+  for (let i = 0; i < bassStringIndex; i++) {
+    adjustedStrings[i] = 'x';
+    if (adjustedFingers) {
+      adjustedFingers[i] = null;
+    }
+  }
+
+  return {
+    ...fingering,
+    strings: adjustedStrings,
+    fingers: adjustedFingers,
+  };
+}
+
+/**
  * Generate a chord fingering by transposing a barre shape
  */
 export function generateBarreFingering(
@@ -246,33 +325,82 @@ export function generateBarreFingering(
 
 /**
  * Get a chord fingering (prefers open voicings, falls back to barre shapes)
+ * If bassNote is provided, attempts to find a fingering where that note is the lowest.
+ * Falls back to standard fingering with console warning if bass note can't be achieved.
  */
 export function getChordFingering(
   root: NoteName,
   quality: ChordQuality,
-  preferOpen: boolean = true
+  preferOpen: boolean = true,
+  bassNote?: NoteName
 ): GuitarFingering | null {
   const chordName = formatChordName(root, quality);
 
+  // Get the standard fingering first
+  let standardFingering: GuitarFingering | null = null;
+
   // Try open voicing first if preferred
   if (preferOpen && OPEN_VOICINGS[chordName]) {
-    return OPEN_VOICINGS[chordName];
+    standardFingering = OPEN_VOICINGS[chordName];
   }
 
-  // Generate from barre shape
-  const barreFingering = generateBarreFingering(root, quality);
-  if (barreFingering) {
-    return barreFingering;
+  // Generate from barre shape if no open voicing
+  if (!standardFingering) {
+    standardFingering = generateBarreFingering(root, quality);
   }
 
   // Fallback: try open voicing even if not preferred
-  if (OPEN_VOICINGS[chordName]) {
-    return OPEN_VOICINGS[chordName];
+  if (!standardFingering && OPEN_VOICINGS[chordName]) {
+    standardFingering = OPEN_VOICINGS[chordName];
   }
 
   // Last resort: generate E-shape barre for basic quality
-  const fallbackQuality: ChordQuality = quality.includes('minor') ? 'minor' : 'major';
-  return generateBarreFingering(root, fallbackQuality, 'E-shape');
+  if (!standardFingering) {
+    const fallbackQuality: ChordQuality = quality.includes('minor') ? 'minor' : 'major';
+    standardFingering = generateBarreFingering(root, fallbackQuality, 'E-shape');
+  }
+
+  if (!standardFingering) {
+    return null;
+  }
+
+  // If no bass note specified, return standard fingering
+  if (!bassNote) {
+    return standardFingering;
+  }
+
+  // If bass note is the root, standard fingering is fine
+  if (normalizeNoteName(bassNote) === normalizeNoteName(root)) {
+    return standardFingering;
+  }
+
+  // Try to adjust the standard fingering for the bass note
+  const adjustedStandard = adjustFingeringForBass(standardFingering, bassNote);
+  if (adjustedStandard) {
+    // Update chord name to reflect slash chord
+    return {
+      ...adjustedStandard,
+      chord: chordName + '/' + normalizeNoteName(bassNote),
+    };
+  }
+
+  // Try all available voicings to find one that works with the bass note
+  const allVoicings = getChordVoicings(root, quality);
+  for (const voicing of allVoicings) {
+    const adjusted = adjustFingeringForBass(voicing, bassNote);
+    if (adjusted) {
+      return {
+        ...adjusted,
+        chord: chordName + '/' + normalizeNoteName(bassNote),
+      };
+    }
+  }
+
+  // Fallback: return standard voicing with warning
+  console.warn(
+    `Could not find fingering for ${chordName}/${bassNote} - bass note not available in any voicing. Using standard voicing.`
+  );
+  return standardFingering;
 }
 
 /**
@@ -310,7 +438,10 @@ export function getChordVoicings(
 
 /**
  * Get fingering for a Chord object
+ * Automatically handles bass note if present on the chord (slash chords/inversions)
  */
-export function getFingeringForChord(chord: { root: CanonicalNote; quality: ChordQuality }): GuitarFingering | null {
-  return getChordFingering(chord.root, chord.quality);
+export function getFingeringForChord(
+  chord: { root: CanonicalNote; quality: ChordQuality; bassNote?: CanonicalNote }
+): GuitarFingering | null {
+  return getChordFingering(chord.root, chord.quality, true, chord.bassNote);
 }

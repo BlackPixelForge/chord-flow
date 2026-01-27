@@ -23,6 +23,69 @@ const NOTE_TO_SEMITONE: Record<string, number> = {
 };
 
 /**
+ * Get the pitch class (0-11) from a MIDI note number
+ */
+function midiToPitchClass(midi: number): number {
+  return midi % 12;
+}
+
+/**
+ * Check if a MIDI note matches a given note name
+ */
+function midiMatchesNote(midi: number, noteName: string): boolean {
+  const pitchClass = midiToPitchClass(midi);
+  const targetPitchClass = NOTE_TO_SEMITONE[noteName];
+  return targetPitchClass !== undefined && pitchClass === targetPitchClass;
+}
+
+/**
+ * Adjust a voicing to ensure the specified bass note is the lowest sounding note.
+ * Mutes any strings that play notes lower than the bass note.
+ * Returns the adjusted MIDI array.
+ */
+function adjustVoicingForBass(
+  midiNotes: (number | null)[],
+  bassNote: string
+): (number | null)[] {
+  const adjusted = [...midiNotes];
+  const bassPitchClass = NOTE_TO_SEMITONE[bassNote];
+
+  if (bassPitchClass === undefined) {
+    return adjusted;
+  }
+
+  // Find the lowest string (lowest index) that plays the bass note
+  let bassStringIndex = -1;
+  let bassMidi: number | null = null;
+
+  for (let i = 0; i < adjusted.length; i++) {
+    const midi = adjusted[i];
+    if (midi !== null && midiMatchesNote(midi, bassNote)) {
+      bassStringIndex = i;
+      bassMidi = midi;
+      break; // Found the lowest occurrence
+    }
+  }
+
+  // If bass note not found in voicing, return as-is (fallback behavior)
+  if (bassStringIndex === -1 || bassMidi === null) {
+    console.warn(`Bass note ${bassNote} not found in voicing, using standard voicing`);
+    return adjusted;
+  }
+
+  // Mute any strings lower (smaller index) than the bass string
+  // that play notes lower than the bass note
+  for (let i = 0; i < bassStringIndex; i++) {
+    const midi = adjusted[i];
+    if (midi !== null && midi < bassMidi) {
+      adjusted[i] = null;
+    }
+  }
+
+  return adjusted;
+}
+
+/**
  * Convert a fingering to MIDI note values for each string
  * Muted strings ('x') are represented as null
  */
@@ -82,6 +145,7 @@ function calculateVoicingCost(
 /**
  * Select the best voicing from candidates using minimum travel algorithm
  * Returns the MIDI notes for the selected voicing
+ * If chord has a bassNote, adjusts the voicing so that note is the lowest
  */
 function selectBestVoicing(
   chord: Chord,
@@ -93,12 +157,22 @@ function selectBestVoicing(
   // If no voicings found, return a fallback
   if (voicings.length === 0) {
     // Fallback: create simple voicing from chord notes
-    return createFallbackVoicing(chord);
+    const fallback = createFallbackVoicing(chord);
+    // Apply bass note adjustment if needed
+    if (chord.bassNote) {
+      return adjustVoicingForBass(fallback, chord.bassNote);
+    }
+    return fallback;
   }
 
   // If this is the first chord (no previous voicing), use the first/open voicing
   if (!lastMidi) {
-    return fingeringToMidi(voicings[0]);
+    const selectedMidi = fingeringToMidi(voicings[0]);
+    // Apply bass note adjustment if needed
+    if (chord.bassNote) {
+      return adjustVoicingForBass(selectedMidi, chord.bassNote);
+    }
+    return selectedMidi;
   }
 
   // Find the voicing with minimum movement cost
@@ -106,7 +180,13 @@ function selectBestVoicing(
   let bestCost = Infinity;
 
   for (const voicing of voicings) {
-    const candidateMidi = fingeringToMidi(voicing);
+    let candidateMidi = fingeringToMidi(voicing);
+
+    // If chord has a bass note, adjust the candidate voicing
+    if (chord.bassNote) {
+      candidateMidi = adjustVoicingForBass(candidateMidi, chord.bassNote);
+    }
+
     const cost = calculateVoicingCost(lastMidi, candidateMidi);
 
     if (cost < bestCost) {
@@ -115,7 +195,14 @@ function selectBestVoicing(
     }
   }
 
-  return fingeringToMidi(bestVoicing);
+  let result = fingeringToMidi(bestVoicing);
+
+  // Apply bass note adjustment to final selection
+  if (chord.bassNote) {
+    result = adjustVoicingForBass(result, chord.bassNote);
+  }
+
+  return result;
 }
 
 /**

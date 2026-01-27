@@ -44,6 +44,7 @@ export interface Chord {
   notes: CanonicalNote[];
   romanNumeral?: RomanNumeral;
   function?: ChordFunction;
+  bassNote?: CanonicalNote; // For slash chords/inversions (e.g., C/E has bassNote: 'E')
 }
 
 // Guitar fingering representation
@@ -146,6 +147,8 @@ export interface MoodAnalysis {
   useSevenths: boolean;
   useBorrowedChords: boolean;
   useSuspensions: boolean;
+  useInversions: boolean; // Whether to use slash chords/inversions
+  pedalBassChance: number; // 0-1, probability of pedal point per section
   preferredFunctions: ('tonic' | 'subdominant' | 'dominant')[];
   positivity: number; // -1 to 1
   intensity: number;  // 0 to 1

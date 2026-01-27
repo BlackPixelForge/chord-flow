@@ -293,10 +293,10 @@ export function CircleOfFifthsVisualization({
   };
 
   // Helper to check if a chord quality is minor-like
+  // Note: diminished chords are NOT included - they should appear on the major (outer) ring
   const isMinorQuality = (quality: string | undefined): boolean => {
     if (!quality) return false;
-    return quality === 'minor' || quality === 'minor7' || quality === 'dim7' ||
-           quality === 'half-dim7' || quality === 'diminished';
+    return quality === 'minor' || quality === 'minor7';
   };
 
   // Determine segment highlighting
@@ -430,6 +430,7 @@ export function CircleOfFifthsVisualization({
                 isCurrentKey={isCurrentKeySegment}
                 isHighlighted={isCurrentStepChord}
                 wasVisited={wasVisited}
+                highlightedChord={isCurrentStepChord ? currentChord : undefined}
               />
             </g>
           );
@@ -487,6 +488,7 @@ export function CircleOfFifthsVisualization({
                 isCurrentKey={isCurrentKeySegment}
                 isHighlighted={isCurrentStepChord}
                 wasVisited={wasVisited}
+                highlightedChord={isCurrentStepChord ? currentChord : undefined}
               />
             </g>
           );
@@ -611,11 +613,22 @@ interface KeyLabelProps {
   isCurrentKey: boolean;
   isHighlighted: boolean;
   wasVisited?: boolean;
+  highlightedChord?: Chord; // The actual chord being highlighted (if any)
 }
 
-function KeyLabel({ note, mode, angle, radius, center, isCurrentKey, isHighlighted, wasVisited }: KeyLabelProps) {
+function KeyLabel({ note, mode, angle, radius, center, isCurrentKey, isHighlighted, wasVisited, highlightedChord }: KeyLabelProps) {
   const pos = polarToCartesian(center, center, radius, angle);
-  const displayName = mode === 'minor' ? `${note}m` : note;
+
+  // If this segment is highlighted with a specific chord, show the chord name
+  // This ensures diminished, augmented, and other chord qualities display correctly
+  let displayName: string;
+  if (isHighlighted && highlightedChord && highlightedChord.root === note) {
+    // Use the chord's formatted name (e.g., "Bdim", "F#°", "Caug")
+    displayName = highlightedChord.name;
+  } else {
+    // Show key name for non-highlighted segments
+    displayName = mode === 'minor' ? `${note}m` : note;
+  }
 
   let className = 'text-[11px] transition-all duration-300 ';
   if (isHighlighted) {

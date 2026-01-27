@@ -15,6 +15,39 @@ interface CircleOfFifthsVisualizationProps {
   size?: number;
 }
 
+// Helper to generate accurate circle position descriptions
+function getCirclePositionDescription(
+  clockwiseDist: number,
+  counterClockwiseDist: number,
+  detailLevel: DetailLevel
+): string {
+  // Handle special cases
+  if (clockwiseDist === 0) {
+    return 'At the home position on the circle.';
+  }
+
+  if (clockwiseDist === 6 && counterClockwiseDist === 6) {
+    return detailLevel === 'beginner'
+      ? 'On the opposite side of the circle from home - the furthest away you can get.'
+      : 'Opposite the tonic (6 steps away), creating maximum harmonic distance and tension.';
+  }
+
+  // Determine which direction is shorter
+  const isClockwiseShorter = clockwiseDist < counterClockwiseDist;
+  const shortDistance = Math.min(clockwiseDist, counterClockwiseDist);
+  const direction = isClockwiseShorter ? 'clockwise' : 'counter-clockwise';
+  const intervalName = isClockwiseShorter ? 'fifth' : 'fourth';
+  const stepText = shortDistance === 1 ? 'step' : 'steps';
+
+  if (detailLevel === 'beginner') {
+    return `${shortDistance} ${stepText} ${direction} from home.`;
+  } else if (detailLevel === 'intermediate') {
+    return `${shortDistance} position${shortDistance === 1 ? '' : 's'} ${direction} (${shortDistance === 1 ? 'a' : shortDistance} perfect ${intervalName}${shortDistance === 1 ? '' : 's'} away).`;
+  } else {
+    return `Position ${isClockwiseShorter ? '+' : '-'}${shortDistance} (${shortDistance} ${intervalName}${shortDistance === 1 ? '' : 's'} ${isClockwiseShorter ? 'up' : 'down'}).`;
+  }
+}
+
 // Music theory explanation generator
 function getChordTheoryExplanation(
   chord: Chord,
@@ -75,13 +108,13 @@ function getChordTheoryExplanation(
       title = detailLevel === 'beginner' ? 'Near Home' : 'Tonic Substitute';
       if (detailLevel === 'beginner') {
         explanation = `${chord.name} shares notes with the home chord, so it feels stable but with a different color. It's like being in a room next to home.`;
-        circleRelation = 'This chord is closely related to the tonic but is NOT the actual center of the key.';
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} This chord is closely related to the tonic but is NOT the actual center of the key.`;
       } else if (detailLevel === 'intermediate') {
         explanation = `${chord.name} (${chord.romanNumeral || 'vi'}) is a tonic substitute - it shares two notes with the tonic triad and can stand in for it, but is not the actual tonal center. It provides stability with added color.`;
-        circleRelation = `Adjacent to the tonic on the circle. The vi chord (relative minor) is 3 positions counter-clockwise from I.`;
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} Common tonic substitutes share the tonic's key signature and can create deceptive cadences.`;
       } else {
         explanation = `${chord.name} (${chord.romanNumeral || 'vi'}) functions as a tonic substitute due to shared tones with the tonic triad. The vi shares scale degrees 1 and 3 with I, allowing it to resolve dominant tension (V→vi deceptive cadence) while providing modal color.`;
-        circleRelation = `The relative minor (vi) sits 3 positions counter-clockwise, sharing the same key signature. It can substitute for tonic but doesn't provide the same definitive resolution.`;
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} Can substitute for tonic but doesn't provide the same definitive resolution.`;
       }
       break;
 
@@ -89,13 +122,13 @@ function getChordTheoryExplanation(
       title = detailLevel === 'beginner' ? 'Tension Chord' : 'Dominant Function';
       if (detailLevel === 'beginner') {
         explanation = `${chord.name} creates tension that wants to resolve. It's like taking a breath before speaking - you can feel it pulling back toward home.`;
-        circleRelation = 'One step clockwise from home. This "fifth" relationship creates the strongest pull in music.';
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} ${clockwiseDistance === 1 ? 'This "fifth" relationship creates the strongest pull in music.' : 'Provides dominant function through its scale degree relationship.'}`;
       } else if (detailLevel === 'intermediate') {
-        explanation = `${chord.name} (${chord.romanNumeral || 'V'}) is the dominant - it creates harmonic tension through the tritone between its 3rd and 7th. This tension naturally resolves to the tonic.`;
-        circleRelation = `One position clockwise (a perfect 5th up). The V→I motion is the most fundamental resolution in tonal music.`;
+        explanation = `${chord.name} (${chord.romanNumeral || 'V'}) provides dominant function - it creates harmonic tension that naturally resolves to the tonic.${clockwiseDistance === 1 ? ' The tritone between its 3rd and 7th drives the resolution.' : ''}`;
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} ${clockwiseDistance === 1 ? 'The V→I motion is the most fundamental resolution in tonal music.' : 'Dominant function can be served by chords at various positions.'}`;
       } else {
-        explanation = `${chord.name} (${chord.romanNumeral || 'V'}) contains the leading tone (scale degree 7) which has a half-step pull to the tonic, plus scale degree 4 which resolves down to 3. This tritone resolution is the engine of tonal harmony.`;
-        circleRelation = `Position +1 clockwise. The circle of fifths is built on this dominant-tonic relationship - each key is the dominant of the one counter-clockwise from it.`;
+        explanation = `${chord.name} (${chord.romanNumeral || 'V'}) provides dominant function${clockwiseDistance === 1 ? ', containing the leading tone (scale degree 7) which has a half-step pull to the tonic, plus scale degree 4 which resolves down to 3' : ' through its role in the scale'}. This ${clockwiseDistance === 1 ? 'tritone resolution' : 'tension'} ${clockwiseDistance === 1 ? 'is the engine of tonal harmony' : 'seeks resolution to the tonic'}.`;
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} ${clockwiseDistance === 1 ? 'The circle of fifths is built on this dominant-tonic relationship.' : 'Dominant function is primarily about scale degree relationships.'}`;
       }
       break;
 
@@ -103,13 +136,13 @@ function getChordTheoryExplanation(
       title = detailLevel === 'beginner' ? 'Bridge Chord' : 'Subdominant Function';
       if (detailLevel === 'beginner') {
         explanation = `${chord.name} moves us away from home gently. It often sets up the tension chord that follows.`;
-        circleRelation = 'One step counter-clockwise from home. A gentler movement than the dominant.';
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} ${counterClockwiseDistance === 1 ? 'A gentler movement than the dominant.' : 'Provides subdominant color.'}`;
       } else if (detailLevel === 'intermediate') {
-        explanation = `${chord.name} (${chord.romanNumeral || 'IV'}) is the subdominant - it moves away from tonic without the urgency of the dominant. The IV→V→I pattern is one of the most common progressions.`;
-        circleRelation = `One position counter-clockwise (a perfect 4th up). This "plagal" relationship is softer than the dominant.`;
+        explanation = `${chord.name} (${chord.romanNumeral || 'IV'}) provides subdominant function - it moves away from tonic without the urgency of the dominant.${counterClockwiseDistance === 1 ? ' The IV→V→I pattern is one of the most common progressions.' : ''}`;
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} ${counterClockwiseDistance === 1 ? 'This "plagal" relationship is softer than the dominant.' : 'Subdominant function prepares motion to the dominant.'}`;
       } else {
-        explanation = `${chord.name} (${chord.romanNumeral || 'IV'}) contains scale degree 4 (the "fa") but not the leading tone, creating motion without the same urgency as dominant function. The subdominant often precedes the dominant in classical harmony.`;
-        circleRelation = `Position -1 counter-clockwise. The subdominant is the inverse of the dominant relationship - our key is the dominant of the subdominant.`;
+        explanation = `${chord.name} (${chord.romanNumeral || 'IV'}) provides subdominant function${counterClockwiseDistance === 1 ? ', containing scale degree 4 (the "fa") but not the leading tone' : ''}, creating motion without the same urgency as dominant function. The subdominant often precedes the dominant in classical harmony.`;
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} ${counterClockwiseDistance === 1 ? 'Our key is the dominant of the subdominant.' : 'Subdominant function is primarily about harmonic preparation.'}`;
       }
       break;
 
@@ -117,13 +150,13 @@ function getChordTheoryExplanation(
       title = detailLevel === 'beginner' ? 'Setup Chord' : 'Predominant Function';
       if (detailLevel === 'beginner') {
         explanation = `${chord.name} helps prepare for what's coming next. It creates smooth movement in the progression.`;
-        circleRelation = 'This chord connects other chords smoothly, creating a sense of forward motion.';
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} This chord connects other chords smoothly, creating forward motion.`;
       } else if (detailLevel === 'intermediate') {
-        explanation = `${chord.name} (${chord.romanNumeral || 'ii'}) serves a predominant function, typically leading to the dominant. The ii-V-I progression is ubiquitous in jazz and pop.`;
-        circleRelation = `The ii chord is two steps counter-clockwise from I, making ii→V→I a chain of falling fifths.`;
+        explanation = `${chord.name} (${chord.romanNumeral || 'ii'}) serves a predominant function, typically leading to the dominant.${counterClockwiseDistance === 2 ? ' The ii-V-I progression is ubiquitous in jazz and pop.' : ''}`;
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} ${counterClockwiseDistance === 2 ? 'Making ii→V→I a chain of falling fifths.' : 'Predominant chords prepare the dominant.'}`;
       } else {
-        explanation = `${chord.name} (${chord.romanNumeral || 'ii'}) functions as a predominant, sharing tones with IV but providing smoother voice leading to V. The root motion ii→V→I follows the circle of fifths counter-clockwise.`;
-        circleRelation = `Position -2 (two fifths counter-clockwise). The ii→V→I creates a sequence of descending fifth root motion, the most natural harmonic flow.`;
+        explanation = `${chord.name} (${chord.romanNumeral || 'ii'}) functions as a predominant${counterClockwiseDistance === 2 ? ', sharing tones with IV but providing smoother voice leading to V' : ', preparing the approach to dominant harmony'}. ${counterClockwiseDistance === 2 ? 'The root motion ii→V→I follows the circle of fifths counter-clockwise.' : 'Predominant function creates harmonic momentum toward resolution.'}`;
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} ${counterClockwiseDistance === 2 ? 'The ii→V→I creates descending fifth root motion, the most natural harmonic flow.' : 'Predominant chords bridge tonic and dominant areas.'}`;
       }
       break;
 
@@ -131,13 +164,13 @@ function getChordTheoryExplanation(
       title = detailLevel === 'beginner' ? 'Borrowed Color' : 'Modal Interchange';
       if (detailLevel === 'beginner') {
         explanation = `${chord.name} is "borrowed" from the parallel ${songKey.mode === 'major' ? 'minor' : 'major'} key. It adds unexpected color and emotion.`;
-        circleRelation = 'This chord comes from the inner/outer ring - same position, different mode.';
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} This chord comes from the ${songKey.mode === 'major' ? 'inner' : 'outer'} ring (parallel mode).`;
       } else if (detailLevel === 'intermediate') {
         explanation = `${chord.name} (${chord.romanNumeral}) is borrowed from ${songKey.tonic} ${songKey.mode === 'major' ? 'minor' : 'major'}. Modal interchange adds chromatic color while maintaining tonal function.`;
-        circleRelation = `Same position on the circle but from the parallel mode (inner ring for minor, outer for major).`;
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} From the parallel mode (${songKey.mode === 'major' ? 'inner' : 'outer'} ring).`;
       } else {
         explanation = `${chord.name} (${chord.romanNumeral}) represents modal interchange from the parallel ${songKey.mode === 'major' ? 'minor' : 'major'}. This creates chromatic voice leading opportunities while the chord's function remains analogous to its diatonic counterpart.`;
-        circleRelation = `The parallel mode occupies the same position on the circle - ${songKey.tonic} major and ${songKey.tonic} minor are the same root, just inner vs outer ring.`;
+        circleRelation = `${getCirclePositionDescription(clockwiseDistance, counterClockwiseDistance, detailLevel)} The parallel mode shares the tonic but uses different scale degrees (${songKey.mode === 'major' ? 'inner' : 'outer'} ring).`;
       }
       break;
 

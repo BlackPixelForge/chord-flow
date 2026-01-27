@@ -1218,7 +1218,8 @@ function upgradeToSeventh(chord: Chord, keyContext: string): Chord {
 
   switch (chord.quality) {
     case 'major':
-      newQuality = 'major7';
+      // V chords become dominant7, others become major7
+      newQuality = chord.function === 'dominant' ? 'dominant7' : 'major7';
       break;
     case 'minor':
       newQuality = 'minor7';
@@ -1227,6 +1228,7 @@ function upgradeToSeventh(chord: Chord, keyContext: string): Chord {
       newQuality = 'half-dim7';
       break;
     default:
+      // Already a 7th chord or other quality
       return chord;
   }
 
@@ -1696,9 +1698,16 @@ function buildChordsFromPattern(
 
     // Apply complexity upgrades
     if (complexity !== 'simple' && qualityHint === 'diatonic') {
-      if (analysis.useSevenths && random() > 0.4) {
-        if (quality === 'major') quality = 'major7';
-        else if (quality === 'minor') quality = 'minor7';
+      if (analysis.useSevenths && random() > 0.3) {
+        // Get the chord function to determine if it's dominant
+        const chordFunc = getChordFunction((degree - 1) % 7, key.mode);
+
+        if (quality === 'major') {
+          // V chords become dominant7, others become major7
+          quality = chordFunc === 'dominant' ? 'dominant7' : 'major7';
+        } else if (quality === 'minor') {
+          quality = 'minor7';
+        }
       }
     }
 
@@ -1894,6 +1903,11 @@ function generateProgression(
     startChord = pickRandom(tonicChords, random);
   }
 
+  // Apply 7th upgrade to start chord if needed
+  if (complexity !== 'simple' && analysis.useSevenths && random() > 0.3) {
+    startChord = upgradeToSeventh(startChord, keyContext);
+  }
+
   progression.push(startChord);
 
   // Build the rest of the progression
@@ -1934,8 +1948,8 @@ function generateProgression(
 
     // Apply modifications based on complexity and analysis
     if (complexity !== 'simple') {
-      // Upgrade to 7ths
-      if (analysis.useSevenths && random() > 0.5) {
+      // Upgrade to 7ths (higher probability for consistent jazzy/bluesy feel)
+      if (analysis.useSevenths && random() > 0.3) {
         nextChord = upgradeToSeventh(nextChord, keyContext);
       }
 

@@ -337,7 +337,72 @@ export const CHORD_FEATURES: Record<string, ChordFeatureExplanation> = {
     intermediate: 'Sus chords replace the 3rd with either the 2nd (sus2) or 4th (sus4). This removes major/minor quality and creates anticipation.',
     advanced: 'Suspensions withhold the chord\'s third, creating non-chord tones that traditionally resolve. Sus4 resolves down to 3, sus2 can resolve up. Modern usage often treats sus chords as color without resolution.',
   },
+  inversions: {
+    beginner: 'Slash chords put a different note in the bass, creating smoother transitions between chords.',
+    intermediate: 'Inversions place the 3rd or 5th in the bass instead of the root. C/E means "C major with E in the bass." This creates stepwise bass motion and smoother voice leading.',
+    advanced: 'Chord inversions redistribute chord tones vertically. 1st inversion (3rd in bass) lightens the sound, 2nd inversion (5th in bass) is less stable and often used for passing motion. Slash chords also include non-chord-tone bass notes for pedal effects.',
+  },
+  pedalBass: {
+    beginner: 'The bass note stays the same while the chords change above it, creating a dreamy, floating feeling.',
+    intermediate: 'Pedal point (or pedal bass) sustains one note in the bass while harmonies change above. This creates tension that resolves when the pedal finally moves.',
+    advanced: 'Pedal point originates from organ music where a sustained bass note creates harmonic tension against changing chords. Tonic pedals (on scale degree 1) create stability; dominant pedals (on 5) create anticipation. Common in cinematic and ambient music.',
+  },
 };
+
+// ============================================================================
+// INVERSION EXPLANATIONS (for individual slash chords)
+// ============================================================================
+
+export interface InversionExplanation {
+  badge: string;
+  beginner: string;
+  intermediate: string;
+  advanced: string;
+}
+
+/**
+ * Get explanation for why a specific bass note was chosen for a chord
+ */
+export function getInversionExplanation(
+  chordRoot: string,
+  bassNote: string,
+  chordNotes: string[]
+): InversionExplanation | null {
+  if (!bassNote || bassNote === chordRoot) {
+    return null; // No inversion, root position
+  }
+
+  // Determine inversion type based on bass note position in chord
+  const bassIndex = chordNotes.indexOf(bassNote);
+
+  if (bassIndex === 1) {
+    // First inversion (3rd in bass)
+    return {
+      badge: '1st inv',
+      beginner: `The 3rd of the chord (${bassNote}) is in the bass, making the sound lighter and smoother.`,
+      intermediate: `First inversion with ${bassNote} in bass. This creates a lighter quality and enables stepwise bass motion between chords.`,
+      advanced: `First inversion (6/3 position). The 3rd in bass creates less root emphasis, useful for passing motion and voice leading. Common for connecting chords with stepwise bass lines.`,
+    };
+  }
+
+  if (bassIndex === 2) {
+    // Second inversion (5th in bass)
+    return {
+      badge: '2nd inv',
+      beginner: `The 5th of the chord (${bassNote}) is in the bass, creating an open, floating feeling.`,
+      intermediate: `Second inversion with ${bassNote} in bass. Less stable than root position, often used for passing chords or pedal effects.`,
+      advanced: `Second inversion (6/4 position). Traditionally unstable and used for cadential (I6/4-V-I), passing, or pedal functions. The perfect 4th against bass creates mild dissonance requiring resolution.`,
+    };
+  }
+
+  // Non-chord tone bass (pedal or chromatic bass)
+  return {
+    badge: 'slash',
+    beginner: `${bassNote} in the bass isn't part of the chord - it's held over from another chord for a smooth sound.`,
+    intermediate: `Slash chord with non-chord tone ${bassNote} in bass. This creates a pedal point effect or chromatic bass line.`,
+    advanced: `Non-chord tone bass (${bassNote}). This slash chord creates a polychordal effect or serves as pedal point. The bass note may be a sustained tonic, passing tone, or anticipation of the next chord.`,
+  };
+}
 
 // ============================================================================
 // COMMON PROGRESSION PATTERN EXPLANATIONS

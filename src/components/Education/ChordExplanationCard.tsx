@@ -4,6 +4,7 @@ import {
   CHORD_FUNCTION_CONTENT,
   getChordFunctionColor,
   getExtensionExplanation,
+  getInversionExplanation,
 } from '../../data/educationalContent';
 
 interface ChordExplanationCardProps {
@@ -32,6 +33,12 @@ export function ChordExplanationCard({
   const extensionExplanation = getExtensionExplanation(chord.quality);
   const hasExtension = extensionExplanation !== null && chord.quality !== 'major' && chord.quality !== 'minor';
 
+  // Get inversion explanation if this chord has a bass note different from root
+  const inversionExplanation = chord.bassNote
+    ? getInversionExplanation(chord.root, chord.bassNote, chord.notes)
+    : null;
+  const hasInversion = inversionExplanation !== null;
+
   // Get content based on detail level
   const getContent = () => {
     switch (detailLevel) {
@@ -53,6 +60,18 @@ export function ChordExplanationCard({
         return extensionExplanation.intermediate;
       case 'advanced':
         return extensionExplanation.advanced;
+    }
+  };
+
+  const getInversionContent = () => {
+    if (!inversionExplanation) return null;
+    switch (detailLevel) {
+      case 'beginner':
+        return inversionExplanation.beginner;
+      case 'intermediate':
+        return inversionExplanation.intermediate;
+      case 'advanced':
+        return inversionExplanation.advanced;
     }
   };
 
@@ -97,6 +116,18 @@ export function ChordExplanationCard({
           </span>
           <p className="text-sm text-indigo-300/80">
             {getExtensionContent()}
+          </p>
+        </div>
+      )}
+
+      {/* Inversion explanation (if chord has a bass note) */}
+      {hasInversion && inversionExplanation && (
+        <div className="mt-2 flex items-start gap-2">
+          <span className="px-1.5 py-0.5 text-xs font-medium bg-purple-500/20 text-purple-300 rounded shrink-0">
+            {inversionExplanation.badge}
+          </span>
+          <p className="text-sm text-purple-300/80">
+            {getInversionContent()}
           </p>
         </div>
       )}

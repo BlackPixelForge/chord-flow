@@ -149,10 +149,28 @@ export function getInterval(from: NoteName, to: NoteName): number {
 
 /**
  * Format a chord name for display
+ * If bassNote is provided and differs from root, formats as a slash chord (e.g., "C/E")
  */
-export function formatChordName(root: NoteName, quality: ChordQuality, keyContext?: string): string {
+export function formatChordName(
+  root: NoteName,
+  quality: ChordQuality,
+  keyContext?: string,
+  bassNote?: NoteName
+): string {
   const displayRoot = displayNoteName(normalizeNoteName(root), keyContext);
-  return displayRoot + QUALITY_SUFFIXES[quality];
+  let name = displayRoot + QUALITY_SUFFIXES[quality];
+
+  if (bassNote) {
+    const canonicalBass = normalizeNoteName(bassNote);
+    const canonicalRoot = normalizeNoteName(root);
+    // Only add slash notation if bass differs from root
+    if (canonicalBass !== canonicalRoot) {
+      const displayBass = displayNoteName(canonicalBass, keyContext);
+      name += '/' + displayBass;
+    }
+  }
+
+  return name;
 }
 
 /**
@@ -165,23 +183,33 @@ export function buildChordNotes(root: NoteName, quality: ChordQuality): Canonica
 
 /**
  * Create a Chord object
+ * If bassNote is provided, creates a slash chord (e.g., C/E for C major with E in bass)
  */
 export function createChord(
   root: NoteName,
   quality: ChordQuality,
   romanNumeral?: RomanNumeral,
   chordFunction?: ChordFunction,
-  keyContext?: string
+  keyContext?: string,
+  bassNote?: NoteName
 ): Chord {
   const canonicalRoot = normalizeNoteName(root);
-  return {
+  const canonicalBass = bassNote ? normalizeNoteName(bassNote) : undefined;
+
+  const chord: Chord = {
     root: canonicalRoot,
     quality,
-    name: formatChordName(root, quality, keyContext),
+    name: formatChordName(root, quality, keyContext, bassNote),
     notes: buildChordNotes(root, quality),
     romanNumeral,
     function: chordFunction
   };
+
+  if (canonicalBass && canonicalBass !== canonicalRoot) {
+    chord.bassNote = canonicalBass;
+  }
+
+  return chord;
 }
 
 /**

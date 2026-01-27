@@ -48,10 +48,9 @@ export function SongView({
   // Track which sections are expanded (independent of playback)
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
 
-  // Get all chords for the circle of fifths visualization
-  const allChords = useMemo(() => {
-    return song.sections.flatMap((section) => section.chords);
-  }, [song.sections]);
+  // Pass sections directly for section-aware visualization
+  // (Backward compatibility: can still flatten if needed)
+  const sections = useMemo(() => song.sections, [song.sections]);
 
   const toggleSectionExpanded = (sectionIndex: number) => {
     setExpandedSections(prev => {
@@ -147,7 +146,9 @@ export function SongView({
         isOpen={showCircleOfFifths}
         onClose={() => setShowCircleOfFifths(false)}
         currentKey={song.key}
-        highlightedChords={allChords}
+        sections={sections}
+        currentSectionIndex={currentSectionIndex}
+        currentChordIndexInSection={currentChordIndex}
         detailLevel={detailLevel}
         onDetailLevelChange={setDetailLevel}
       />

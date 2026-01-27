@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import type { Key, Chord, DetailLevel, ChordFunction, CanonicalNote } from '../../types/music';
+import type { Key, Chord, DetailLevel, ChordFunction, CanonicalNote, SongSection } from '../../types/music';
 import {
   CIRCLE_OF_FIFTHS_MAJOR,
   CIRCLE_OF_FIFTHS_MINOR,
@@ -7,9 +7,89 @@ import {
   getCirclePosition,
 } from '../../data/circleOfFifths';
 
+// ============================================================================
+// INDEX MAPPING UTILITIES
+// ============================================================================
+
+/**
+ * Convert flat chord index to section + chord index within section
+ */
+function flatToSection(flatIndex: number, sections: SongSection[]): { sectionIndex: number; chordIndex: number } {
+  let accumulated = 0;
+  for (let i = 0; i < sections.length; i++) {
+    const sectionLength = sections[i].chords.length;
+    if (flatIndex < accumulated + sectionLength) {
+      return {
+        sectionIndex: i,
+        chordIndex: flatIndex - accumulated
+      };
+    }
+    accumulated += sectionLength;
+  }
+  // If index out of bounds, return last chord
+  const lastSection = sections.length - 1;
+  return {
+    sectionIndex: lastSection,
+    chordIndex: Math.max(0, sections[lastSection]?.chords.length - 1 || 0)
+  };
+}
+
+/**
+ * Convert section + chord index to flat chord index
+ */
+function sectionToFlat(sectionIndex: number, chordIndex: number, sections: SongSection[]): number {
+  let flatIndex = 0;
+  for (let i = 0; i < sectionIndex && i < sections.length; i++) {
+    flatIndex += sections[i].chords.length;
+  }
+  return flatIndex + chordIndex;
+}
+
+// ============================================================================
+// SECTION STYLING (matches SongView.tsx)
+// ============================================================================
+
+const SECTION_COLORS: Record<string, string> = {
+  intro: 'border-l-amber-500 bg-amber-500/5',
+  verse: 'border-l-blue-500 bg-blue-500/5',
+  'pre-chorus': 'border-l-purple-500 bg-purple-500/5',
+  chorus: 'border-l-pink-500 bg-pink-500/5',
+  bridge: 'border-l-teal-500 bg-teal-500/5',
+  outro: 'border-l-amber-500 bg-amber-500/5',
+  solo: 'border-l-orange-500 bg-orange-500/5',
+  breakdown: 'border-l-red-500 bg-red-500/5',
+};
+
+const SECTION_BADGES: Record<string, string> = {
+  intro: 'bg-amber-500/20 text-amber-300',
+  verse: 'bg-blue-500/20 text-blue-300',
+  'pre-chorus': 'bg-purple-500/20 text-purple-300',
+  chorus: 'bg-pink-500/20 text-pink-300',
+  bridge: 'bg-teal-500/20 text-teal-300',
+  outro: 'bg-amber-500/20 text-amber-300',
+  solo: 'bg-orange-500/20 text-orange-300',
+  breakdown: 'bg-red-500/20 text-red-300',
+};
+
+// ============================================================================
+// COMPONENT PROPS & TYPES
+// ============================================================================
+
+interface NavigationState {
+  sectionIndex: number;
+  chordIndexInSection: number;
+  flatIndex: number;
+}
+
 interface CircleOfFifthsVisualizationProps {
   currentKey: Key;
+  // Backward compatible: flat chord array
   highlightedChords?: Chord[];
+  // NEW: Section-aware props
+  sections?: SongSection[];
+  currentSectionIndex?: number;
+  currentChordIndexInSection?: number;
+  // Existing props
   detailLevel?: DetailLevel;
   onKeyClick?: (key: Key) => void;
   size?: number;
@@ -199,12 +279,29 @@ function getChordTheoryExplanation(
 export function CircleOfFifthsVisualization({
   currentKey,
   highlightedChords = [],
+  sections,
+  currentSectionIndex,
+  currentChordIndexInSection,
   detailLevel = 'beginner',
   onKeyClick,
   size = 350,
 }: CircleOfFifthsVisualizationProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  // Determine if we're in section mode
+  const isSectionMode = useMemo(() => {
+    return sections !== undefined && sections.length > 0;
+  }, [sections]);
+
+  // Navigation state
+  const [navState, setNavState] = useState<NavigationState>({
+    sectionIndex: currentSectionIndex || 0,
+    chordIndexInSection: currentChordIndexInSection || 0,
+    flatIndex: 0
+  });
+
+  const [viewMode, setViewMode] = useState<'flat' | 'sectioned'>('sectioned');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isAutoPlayPaused, setIsAutoPlayPaused] = useState(false);
+  const [pendingNextSection, setPendingNextSection] = useState<number | null>(null);
 
   const center = size / 2;
   const outerRadius = size * 0.42;
@@ -212,16 +309,46 @@ export function CircleOfFifthsVisualization({
   const labelOuterRadius = size * 0.35;
   const labelInnerRadius = size * 0.22;
 
-  // Get unique chords in order
-  const chordProgression = useMemo(() => {
-    return highlightedChords.length > 0 ? highlightedChords : [];
-  }, [highlightedChords]);
+  // Derive flat chord array from either sections or highlightedChords
+  const flatChords = useMemo(() => {
+    if (isSectionMode && sections) {
+      return sections.flatMap(s => s.chords);
+    }
+    return highlightedChords;
+  }, [isSectionMode, sections, highlightedChords]);
 
-  const totalSteps = chordProgression.length;
+  const totalChords = flatChords.length;
 
-  // Current chord info
-  const currentChord = chordProgression[currentStep] || null;
-  const previousChord = currentStep > 0 ? chordProgression[currentStep - 1] : null;
+  // Get current chord based on navigation state
+  const currentChord = useMemo(() => {
+    if (isSectionMode && sections) {
+      const section = sections[navState.sectionIndex];
+      return section?.chords[navState.chordIndexInSection] || null;
+    }
+    return flatChords[navState.flatIndex] || null;
+  }, [isSectionMode, sections, navState, flatChords]);
+
+  const previousChord = useMemo(() => {
+    if (navState.flatIndex > 0) {
+      return flatChords[navState.flatIndex - 1] || null;
+    }
+    return null;
+  }, [navState.flatIndex, flatChords]);
+
+  // For backward compatibility - keep legacy naming
+  const chordProgression = flatChords;
+  const totalSteps = totalChords;
+
+  // Sync external props with internal navigation state
+  useEffect(() => {
+    if (isSectionMode && sections && currentSectionIndex !== undefined && currentChordIndexInSection !== undefined) {
+      setNavState({
+        sectionIndex: currentSectionIndex,
+        chordIndexInSection: currentChordIndexInSection,
+        flatIndex: sectionToFlat(currentSectionIndex, currentChordIndexInSection, sections)
+      });
+    }
+  }, [currentSectionIndex, currentChordIndexInSection, isSectionMode, sections]);
 
   // Get theory explanation for current chord
   const theoryExplanation = useMemo(() => {
@@ -229,45 +356,186 @@ export function CircleOfFifthsVisualization({
     return getChordTheoryExplanation(
       currentChord,
       currentKey,
-      currentStep,
+      navState.flatIndex,
       totalSteps,
       previousChord,
       detailLevel
     );
-  }, [currentChord, currentKey, currentStep, totalSteps, previousChord, detailLevel]);
+  }, [currentChord, currentKey, navState.flatIndex, totalSteps, previousChord, detailLevel]);
 
   // Calculate segment angle (30 degrees each for 12 segments)
   const segmentAngle = (2 * Math.PI) / 12;
 
   // Navigation handlers
   const goToNext = useCallback(() => {
-    setCurrentStep((prev) => Math.min(prev + 1, totalSteps - 1));
-  }, [totalSteps]);
+    if (!isSectionMode || !sections || viewMode === 'flat') {
+      // Flat mode navigation
+      setNavState(prev => ({
+        ...prev,
+        flatIndex: Math.min(prev.flatIndex + 1, totalChords - 1)
+      }));
+      return;
+    }
+
+    // Section-aware navigation
+    const currentSection = sections[navState.sectionIndex];
+    if (!currentSection) return;
+
+    const isLastChordInSection = navState.chordIndexInSection === currentSection.chords.length - 1;
+
+    if (isLastChordInSection) {
+      const isLastSection = navState.sectionIndex === sections.length - 1;
+      if (isLastSection) {
+        return; // Already at end
+      }
+
+      // Move to first chord of next section
+      setNavState({
+        sectionIndex: navState.sectionIndex + 1,
+        chordIndexInSection: 0,
+        flatIndex: sectionToFlat(navState.sectionIndex + 1, 0, sections)
+      });
+    } else {
+      // Move to next chord in same section
+      setNavState(prev => ({
+        ...prev,
+        chordIndexInSection: prev.chordIndexInSection + 1,
+        flatIndex: prev.flatIndex + 1
+      }));
+    }
+  }, [isSectionMode, sections, viewMode, navState, totalChords]);
 
   const goToPrev = useCallback(() => {
-    setCurrentStep((prev) => Math.max(prev - 1, 0));
-  }, []);
+    if (!isSectionMode || !sections || viewMode === 'flat') {
+      // Flat mode navigation
+      setNavState(prev => ({
+        ...prev,
+        flatIndex: Math.max(prev.flatIndex - 1, 0)
+      }));
+      return;
+    }
 
+    // Section-aware navigation
+    const isFirstChordInSection = navState.chordIndexInSection === 0;
+
+    if (isFirstChordInSection) {
+      if (navState.sectionIndex === 0) {
+        return; // Already at first chord
+      }
+
+      // Move to last chord of previous section
+      const prevSection = sections[navState.sectionIndex - 1];
+      setNavState({
+        sectionIndex: navState.sectionIndex - 1,
+        chordIndexInSection: prevSection.chords.length - 1,
+        flatIndex: sectionToFlat(navState.sectionIndex - 1, prevSection.chords.length - 1, sections)
+      });
+    } else {
+      // Move to previous chord in same section
+      setNavState(prev => ({
+        ...prev,
+        chordIndexInSection: prev.chordIndexInSection - 1,
+        flatIndex: prev.flatIndex - 1
+      }));
+    }
+  }, [isSectionMode, sections, viewMode, navState]);
+
+  // For clicking on specific chord pills
+  const goToChord = useCallback((sectionIndex: number, chordIndex: number) => {
+    if (!sections) return;
+
+    setNavState({
+      sectionIndex,
+      chordIndexInSection: chordIndex,
+      flatIndex: sectionToFlat(sectionIndex, chordIndex, sections)
+    });
+
+    // If auto-play was paused at section boundary, resume
+    if (isAutoPlayPaused && isPlaying) {
+      setIsAutoPlayPaused(false);
+      setPendingNextSection(null);
+    }
+  }, [sections, isAutoPlayPaused, isPlaying]);
+
+  // Legacy flat index navigation (for backward compatibility)
   const goToStep = useCallback((step: number) => {
-    setCurrentStep(step);
-  }, []);
+    if (isSectionMode && sections) {
+      const { sectionIndex, chordIndex } = flatToSection(step, sections);
+      setNavState({
+        sectionIndex,
+        chordIndexInSection: chordIndex,
+        flatIndex: step
+      });
+    } else {
+      setNavState(prev => ({
+        ...prev,
+        flatIndex: step
+      }));
+    }
+  }, [isSectionMode, sections]);
 
-  // Auto-play functionality
+  // Handler for continuing to next section after pause
+  const handleContinueToNextSection = useCallback(() => {
+    if (pendingNextSection === null || !sections) return;
+
+    setNavState({
+      sectionIndex: pendingNextSection,
+      chordIndexInSection: 0,
+      flatIndex: sectionToFlat(pendingNextSection, 0, sections)
+    });
+
+    setIsAutoPlayPaused(false);
+    setPendingNextSection(null);
+    setIsPlaying(true);
+  }, [pendingNextSection, sections]);
+
+  // Auto-play functionality with section boundary pauses
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying || isAutoPlayPaused) return;
 
     const timer = setInterval(() => {
-      setCurrentStep((prev) => {
-        if (prev >= totalSteps - 1) {
+      if (!isSectionMode || !sections || viewMode === 'flat') {
+        // Flat mode auto-play
+        setNavState(prev => {
+          if (prev.flatIndex >= totalChords - 1) {
+            setIsPlaying(false);
+            return prev;
+          }
+          return { ...prev, flatIndex: prev.flatIndex + 1 };
+        });
+        return;
+      }
+
+      // Section-aware auto-play
+      const currentSection = sections[navState.sectionIndex];
+      if (!currentSection) {
+        setIsPlaying(false);
+        return;
+      }
+
+      const isLastChordInSection = navState.chordIndexInSection === currentSection.chords.length - 1;
+
+      if (isLastChordInSection) {
+        const isLastSection = navState.sectionIndex === sections.length - 1;
+
+        if (isLastSection) {
           setIsPlaying(false);
-          return prev;
+          return;
         }
-        return prev + 1;
-      });
+
+        // PAUSE at section boundary
+        setIsPlaying(false);
+        setIsAutoPlayPaused(true);
+        setPendingNextSection(navState.sectionIndex + 1);
+        return;
+      }
+
+      // Continue within section
+      goToNext();
     }, 2000);
 
     return () => clearInterval(timer);
-  }, [isPlaying, totalSteps]);
+  }, [isPlaying, isAutoPlayPaused, navState, sections, isSectionMode, viewMode, totalChords, goToNext]);
 
   // Generate segment paths
   const generateSegmentPath = (
@@ -310,12 +578,12 @@ export function CircleOfFifthsVisualization({
       (isMinorRing ? isMinorQuality(currentChord?.quality) : !isMinorQuality(currentChord?.quality));
 
     // Check if this chord was in previous steps - must match both root AND quality
-    const wasVisited = chordProgression.slice(0, currentStep).some(c =>
+    const wasVisited = chordProgression.slice(0, navState.flatIndex).some(c =>
       c.root === note && (isMinorRing ? isMinorQuality(c.quality) : !isMinorQuality(c.quality))
     );
 
     // Check if this chord is upcoming - must match both root AND quality
-    const isUpcoming = chordProgression.slice(currentStep + 1).some(c =>
+    const isUpcoming = chordProgression.slice(navState.flatIndex + 1).some(c =>
       c.root === note && (isMinorRing ? isMinorQuality(c.quality) : !isMinorQuality(c.quality))
     );
 
@@ -333,32 +601,144 @@ export function CircleOfFifthsVisualization({
 
   return (
     <div className="space-y-4">
-      {/* Header with step indicator */}
-      <div className="text-center">
-        <h3 className="text-lg font-semibold text-slate-200">Chord Journey</h3>
-        <p className="text-sm text-slate-400 mt-1">
-          Step {currentStep + 1} of {totalSteps}
-        </p>
+      {/* Header with view toggle */}
+      <div className={`${isSectionMode && sections ? 'flex items-center justify-between' : 'text-center'}`}>
+        <div className={isSectionMode && sections ? '' : 'text-center'}>
+          <h3 className="text-lg font-semibold text-slate-200">Chord Journey</h3>
+          {isSectionMode && sections && sections[navState.sectionIndex] ? (
+            <p className="text-sm text-slate-400 mt-1">
+              Chord {navState.chordIndexInSection + 1} of {sections[navState.sectionIndex].chords.length} in {sections[navState.sectionIndex].name}
+            </p>
+          ) : (
+            <p className="text-sm text-slate-400 mt-1">
+              Step {navState.flatIndex + 1} of {totalSteps}
+            </p>
+          )}
+        </div>
+
+        {/* View mode toggle (only in section mode) */}
+        {isSectionMode && sections && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">View:</span>
+            <div className="flex rounded-lg overflow-hidden border border-slate-700">
+              <button
+                onClick={() => setViewMode('sectioned')}
+                className={`px-3 py-1 text-xs font-medium transition-colors ${
+                  viewMode === 'sectioned'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                }`}
+              >
+                By Section
+              </button>
+              <button
+                onClick={() => setViewMode('flat')}
+                className={`px-3 py-1 text-xs font-medium transition-colors ${
+                  viewMode === 'flat'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                }`}
+              >
+                All Chords
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Chord step pills */}
-      <div className="flex flex-wrap justify-center gap-2">
-        {chordProgression.map((chord, idx) => (
+      {/* Chord pills - sectioned or flat view */}
+      {isSectionMode && sections && viewMode === 'sectioned' ? (
+        /* Sectioned view with section headers */
+        <div className="space-y-3">
+          {sections.map((section, sectionIdx) => {
+            const colorClass = SECTION_COLORS[section.type] || SECTION_COLORS.verse;
+            const badgeClass = SECTION_BADGES[section.type] || SECTION_BADGES.verse;
+            const isCurrentSection = sectionIdx === navState.sectionIndex;
+
+            return (
+              <div
+                key={section.id}
+                className={`border-l-4 rounded-lg p-3 transition-all ${colorClass}`}
+              >
+                {/* Section header */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${badgeClass}`}>
+                      {section.type.toUpperCase()}
+                    </span>
+                    <span className="text-sm font-semibold text-slate-200">{section.name}</span>
+                    {section.bars && (
+                      <span className="text-xs text-slate-500">{section.bars} bars</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Chord pills for this section */}
+                <div className="flex flex-wrap gap-2">
+                  {section.chords.map((chord, chordIdx) => {
+                    const isCurrentChord = isCurrentSection && chordIdx === navState.chordIndexInSection;
+                    const flatIdx = sectionToFlat(sectionIdx, chordIdx, sections);
+                    const wasVisited = flatIdx < navState.flatIndex;
+                    const isUpcoming = flatIdx > navState.flatIndex;
+
+                    return (
+                      <button
+                        key={`${section.id}-chord-${chordIdx}`}
+                        onClick={() => goToChord(sectionIdx, chordIdx)}
+                        className={`px-3 py-1 text-sm rounded-full transition-all ${
+                          isCurrentChord
+                            ? 'bg-indigo-600 text-white scale-110 shadow-lg shadow-indigo-500/30'
+                            : wasVisited
+                              ? 'bg-slate-700 text-slate-300'
+                              : isUpcoming
+                                ? 'bg-slate-800 text-slate-500'
+                                : 'bg-slate-700 text-slate-400'
+                        }`}
+                      >
+                        {chord.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* Flat view - all chords in one row */
+        <div className="flex flex-wrap justify-center gap-2">
+          {chordProgression.map((chord, idx) => (
+            <button
+              key={`step-${idx}`}
+              onClick={() => goToStep(idx)}
+              className={`px-3 py-1 text-sm rounded-full transition-all ${
+                idx === navState.flatIndex
+                  ? 'bg-indigo-600 text-white scale-110 shadow-lg shadow-indigo-500/30'
+                  : idx < navState.flatIndex
+                    ? 'bg-slate-700 text-slate-300'
+                    : 'bg-slate-800 text-slate-500'
+              }`}
+            >
+              {chord.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Section boundary pause UI */}
+      {isAutoPlayPaused && pendingNextSection !== null && sections && (
+        <div className="flex items-center justify-center gap-3 p-3 bg-indigo-900/30 border border-indigo-600/50 rounded-lg">
+          <span className="text-sm text-slate-300">
+            Reached end of {sections[navState.sectionIndex].name}
+          </span>
           <button
-            key={`step-${idx}`}
-            onClick={() => goToStep(idx)}
-            className={`px-3 py-1 text-sm rounded-full transition-all ${
-              idx === currentStep
-                ? 'bg-indigo-600 text-white scale-110 shadow-lg shadow-indigo-500/30'
-                : idx < currentStep
-                  ? 'bg-slate-700 text-slate-300'
-                  : 'bg-slate-800 text-slate-500'
-            }`}
+            onClick={handleContinueToNextSection}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            {chord.name}
+            Continue to {sections[pendingNextSection].name} →
           </button>
-        ))}
-      </div>
+        </div>
+      )}
 
       {/* SVG Circle */}
       <svg
@@ -525,9 +905,9 @@ export function CircleOfFifthsVisualization({
       <div className="flex items-center justify-center gap-4">
         <button
           onClick={goToPrev}
-          disabled={currentStep === 0}
+          disabled={navState.flatIndex === 0}
           className={`p-2 rounded-lg transition-colors ${
-            currentStep === 0
+            navState.flatIndex === 0
               ? 'text-slate-600 cursor-not-allowed'
               : 'text-slate-300 hover:bg-slate-700'
           }`}
@@ -549,9 +929,9 @@ export function CircleOfFifthsVisualization({
 
         <button
           onClick={goToNext}
-          disabled={currentStep === totalSteps - 1}
+          disabled={navState.flatIndex === totalSteps - 1}
           className={`p-2 rounded-lg transition-colors ${
-            currentStep === totalSteps - 1
+            navState.flatIndex === totalSteps - 1
               ? 'text-slate-600 cursor-not-allowed'
               : 'text-slate-300 hover:bg-slate-700'
           }`}

@@ -1,12 +1,16 @@
 import { useCallback, useEffect } from 'react';
-import type { Key, Chord, DetailLevel } from '../../types/music';
+import type { Key, Chord, DetailLevel, SongSection } from '../../types/music';
 import { CircleOfFifthsVisualization } from '../CircleOfFifths/CircleOfFifthsVisualization';
 
 interface TheoryConceptModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentKey: Key;
-  highlightedChords: Chord[];
+  // Support both flat and section-aware modes
+  highlightedChords?: Chord[];
+  sections?: SongSection[];
+  currentSectionIndex?: number;
+  currentChordIndexInSection?: number;
   detailLevel: DetailLevel;
   onDetailLevelChange?: (level: DetailLevel) => void;
 }
@@ -16,6 +20,9 @@ export function TheoryConceptModal({
   onClose,
   currentKey,
   highlightedChords,
+  sections,
+  currentSectionIndex,
+  currentChordIndexInSection,
   detailLevel,
   onDetailLevelChange,
 }: TheoryConceptModalProps) {
@@ -85,6 +92,9 @@ export function TheoryConceptModal({
           <CircleOfFifthsVisualization
             currentKey={currentKey}
             highlightedChords={highlightedChords}
+            sections={sections}
+            currentSectionIndex={currentSectionIndex}
+            currentChordIndexInSection={currentChordIndexInSection}
             detailLevel={detailLevel}
             size={350}
           />

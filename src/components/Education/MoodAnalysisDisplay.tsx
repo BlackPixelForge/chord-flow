@@ -94,6 +94,12 @@ export function MoodAnalysisDisplay({ analysis, detailLevel }: MoodAnalysisDispl
           {analysis.useSuspensions && (
             <FeatureBadge label="Suspensions" />
           )}
+          {analysis.useInversions && (
+            <FeatureBadge label="Slash chords" />
+          )}
+          {analysis.pedalBassChance > 0 && (
+            <FeatureBadge label="Pedal bass" />
+          )}
         </div>
       )}
     </div>

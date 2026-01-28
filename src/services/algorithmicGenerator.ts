@@ -17,6 +17,7 @@ import {
   getKeyId,
   getChordFunction,
 } from '../utils/musicTheory';
+import { selectStrummingPatterns } from '../data/strummingPatterns';
 
 // ============================================================================
 // MOOD ANALYSIS - Comprehensive Natural Language Interpretation
@@ -66,6 +67,19 @@ const TRAITS = {
   medium: { tempoRange: { min: 95, max: 125 } },
   fast: { tempoRange: { min: 120, max: 150 } },
   veryFast: { tempoRange: { min: 145, max: 180 } },
+
+  // Strumming style presets
+  straightStrum: { strummingStyle: 'straight' as const, rhythmComplexity: 'moderate' as const },
+  swingStrum: { strummingStyle: 'swing' as const, rhythmComplexity: 'complex' as const },
+  fingerpickStrum: { strummingStyle: 'fingerpicking' as const, rhythmComplexity: 'moderate' as const },
+  arpeggiatedStrum: { strummingStyle: 'arpeggiated' as const, rhythmComplexity: 'moderate' as const },
+  palmMuteStrum: { strummingStyle: 'palm-muted' as const, rhythmComplexity: 'simple' as const },
+  reggaeStrum: { strummingStyle: 'reggae' as const, rhythmComplexity: 'moderate' as const },
+  latinStrum: { strummingStyle: 'latin' as const, rhythmComplexity: 'complex' as const },
+  simpleRhythm: { rhythmComplexity: 'simple' as const },
+  complexRhythm: { rhythmComplexity: 'complex' as const },
+  waltzTime: { suggestedTimeSignature: { beats: 3, value: 4 } },
+  sixEightTime: { suggestedTimeSignature: { beats: 6, value: 8 } },
 };
 
 // Comprehensive keywords mapped to mood characteristics
@@ -530,7 +544,7 @@ const MOOD_KEYWORDS: Record<string, Partial<MoodAnalysis>> = {
   // =========================================================================
   // GENRES - ROCK / METAL / PUNK
   // =========================================================================
-  rock: { ...TRAITS.highEnergy, ...TRAITS.fast },
+  rock: { ...TRAITS.highEnergy, ...TRAITS.fast, ...TRAITS.palmMuteStrum },
   rocknroll: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.fast },
   hardrock: { ...TRAITS.minorMode, ...TRAITS.highEnergy, ...TRAITS.highTension },
   softrock: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy },
@@ -538,7 +552,7 @@ const MOOD_KEYWORDS: Record<string, Partial<MoodAnalysis>> = {
   altrock: { ...TRAITS.mediumEnergy },
   alternative: { ...TRAITS.mediumEnergy },
   grunge: { ...TRAITS.minorMode, ...TRAITS.mediumEnergy, ...TRAITS.dark },
-  metal: { ...TRAITS.minorMode, ...TRAITS.highEnergy, ...TRAITS.highTension, ...TRAITS.dark },
+  metal: { ...TRAITS.minorMode, ...TRAITS.highEnergy, ...TRAITS.highTension, ...TRAITS.dark, ...TRAITS.palmMuteStrum },
   heavymetal: { ...TRAITS.minorMode, ...TRAITS.highEnergy, ...TRAITS.highTension, ...TRAITS.dark },
   deathmetal: { ...TRAITS.minorMode, ...TRAITS.highEnergy, ...TRAITS.highTension, ...TRAITS.dark, ...TRAITS.veryFast },
   blackmetal: { ...TRAITS.minorMode, ...TRAITS.highEnergy, ...TRAITS.highTension, ...TRAITS.dark, ...TRAITS.veryFast },
@@ -547,7 +561,7 @@ const MOOD_KEYWORDS: Record<string, Partial<MoodAnalysis>> = {
   doommetal: { ...TRAITS.minorMode, ...TRAITS.lowEnergy, ...TRAITS.dark, ...TRAITS.verySlow },
   sludge: { ...TRAITS.minorMode, ...TRAITS.mediumEnergy, ...TRAITS.dark, ...TRAITS.slow },
   stoner: { ...TRAITS.minorMode, ...TRAITS.mediumEnergy, ...TRAITS.slow },
-  punk: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.fast },
+  punk: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.fast, ...TRAITS.palmMuteStrum, ...TRAITS.simpleRhythm },
   punkrock: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.fast },
   hardcore: { ...TRAITS.minorMode, ...TRAITS.highEnergy, ...TRAITS.highTension, ...TRAITS.veryFast },
   postpunk: { ...TRAITS.minorMode, ...TRAITS.mediumEnergy, ...TRAITS.dark },
@@ -563,10 +577,10 @@ const MOOD_KEYWORDS: Record<string, Partial<MoodAnalysis>> = {
   synthpop: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy, ...TRAITS.bright },
   electropop: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy, ...TRAITS.bright },
   indiepop: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy },
-  dreampop: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.extended, ...TRAITS.suspended },
+  dreampop: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.extended, ...TRAITS.suspended, ...TRAITS.arpeggiatedStrum },
   dance: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.fast },
   disco: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.bright, ...TRAITS.fast },
-  funk: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.extended },
+  funk: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.extended, ...TRAITS.straightStrum, ...TRAITS.complexRhythm },
   funky: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.extended },
   groovy: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy, ...TRAITS.extended },
   groove: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy, ...TRAITS.extended },
@@ -593,7 +607,7 @@ const MOOD_KEYWORDS: Record<string, Partial<MoodAnalysis>> = {
   // =========================================================================
   // GENRES - JAZZ / BLUES / SOUL
   // =========================================================================
-  jazz: { ...TRAITS.extended, ...TRAITS.colorful },
+  jazz: { ...TRAITS.extended, ...TRAITS.colorful, ...TRAITS.swingStrum },
   jazzy: { ...TRAITS.extended, ...TRAITS.colorful },
   smoothjazz: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.extended },
   cooljazz: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.extended },
@@ -602,7 +616,7 @@ const MOOD_KEYWORDS: Record<string, Partial<MoodAnalysis>> = {
   bigband: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.extended },
   fusion: { ...TRAITS.extended, ...TRAITS.colorful },
   jazzfusion: { ...TRAITS.extended, ...TRAITS.colorful },
-  blues: { ...TRAITS.majorMode, ...TRAITS.extended, ...TRAITS.slow },
+  blues: { ...TRAITS.majorMode, ...TRAITS.extended, ...TRAITS.slow, ...TRAITS.swingStrum },
   bluesy: { ...TRAITS.majorMode, ...TRAITS.extended },
   rhythm: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy },
   rnb: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy, ...TRAITS.extended },
@@ -615,12 +629,12 @@ const MOOD_KEYWORDS: Record<string, Partial<MoodAnalysis>> = {
   // =========================================================================
   // GENRES - FOLK / COUNTRY / ACOUSTIC
   // =========================================================================
-  folk: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.lowTension },
+  folk: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.lowTension, ...TRAITS.fingerpickStrum },
   folky: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.lowTension },
   folkrock: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy },
   indiefolk: { ...TRAITS.majorMode, ...TRAITS.lowEnergy },
   americana: { ...TRAITS.majorMode, ...TRAITS.lowEnergy },
-  country: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy },
+  country: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy, ...TRAITS.straightStrum },
   countryrock: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy },
   bluegrass: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.fast },
   acoustic: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.lowTension },
@@ -656,7 +670,7 @@ const MOOD_KEYWORDS: Record<string, Partial<MoodAnalysis>> = {
   bossa: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.extended },
   bossanova: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.extended },
   samba: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.fast },
-  reggae: { ...TRAITS.majorMode, ...TRAITS.lowEnergy },
+  reggae: { ...TRAITS.majorMode, ...TRAITS.lowEnergy, ...TRAITS.reggaeStrum },
   ska: { ...TRAITS.majorMode, ...TRAITS.highEnergy, ...TRAITS.fast },
   dub: { ...TRAITS.minorMode, ...TRAITS.lowEnergy },
   caribbean: { ...TRAITS.majorMode, ...TRAITS.mediumEnergy },
@@ -999,6 +1013,10 @@ function analyzeMood(moodText: string): MoodAnalysis {
     positivity: 0,
     intensity: 0.5,
     detectedKeywords: [],
+    // Strumming defaults
+    strummingStyle: 'straight',
+    rhythmComplexity: 'moderate',
+    suggestedTimeSignature: { beats: 4, value: 4 },
   };
 
   // Track matches for weighting
@@ -2224,6 +2242,9 @@ export function generateAlgorithmicSong(request: AIGenerationRequest): Song {
   // Build description
   const description = buildDescription(analysis, complexity, key);
 
+  // Select strumming patterns based on mood analysis
+  const rhythmGuidance = selectStrummingPatterns(analysis, tempo);
+
   return {
     id: uuidv4(),
     title,
@@ -2234,6 +2255,7 @@ export function generateAlgorithmicSong(request: AIGenerationRequest): Song {
     customMood: mood,
     generatedBy: 'preset',
     moodAnalysis: analysis,
+    rhythmGuidance,
   };
 }
 

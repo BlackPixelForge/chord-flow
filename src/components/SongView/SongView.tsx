@@ -4,6 +4,7 @@ import { ChordDiagram } from '../ChordDiagram/ChordDiagram';
 import { getFingeringForChord } from '../../data/chords';
 import { ProgressionExplainer } from '../Education/ProgressionExplainer';
 import { TheoryConceptModal } from '../Education/TheoryConceptModal';
+import { StrummingPatternDisplay } from '../StrummingPattern/StrummingPatternDisplay';
 
 interface SongViewProps {
   song: Song;
@@ -43,6 +44,7 @@ export function SongView({
   onSectionClick,
 }: SongViewProps) {
   const [showExplainer, setShowExplainer] = useState(false);
+  const [showStrumming, setShowStrumming] = useState(false);
   const [showCircleOfFifths, setShowCircleOfFifths] = useState(false);
   const [detailLevel, setDetailLevel] = useState<DetailLevel>('beginner');
   // Track which sections are expanded (independent of playback)
@@ -124,6 +126,38 @@ export function SongView({
         </div>
       )}
 
+      {/* Strumming Pattern Section */}
+      {song.rhythmGuidance && (
+        <div className="border border-slate-700/50 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setShowStrumming(!showStrumming)}
+            className="w-full flex items-center justify-between p-4 bg-slate-800/30 hover:bg-slate-800/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <RhythmIcon />
+              <span className="text-sm font-medium text-slate-300">
+                How to strum it
+              </span>
+              <span className="text-xs text-slate-500">
+                Rhythm patterns and tips
+              </span>
+            </div>
+            <ChevronIcon isOpen={showStrumming} />
+          </button>
+
+          {showStrumming && (
+            <div className="p-4 border-t border-slate-700/50">
+              <StrummingPatternDisplay
+                rhythmGuidance={song.rhythmGuidance}
+                tempo={song.tempo}
+                detailLevel={detailLevel}
+                onDetailLevelChange={setDetailLevel}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Sections */}
       <div className="space-y-6">
         {song.sections.map((section, sectionIndex) => (
@@ -172,6 +206,26 @@ function LightbulbIcon() {
       <path d="M9 18h6" />
       <path d="M10 22h4" />
       <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+    </svg>
+  );
+}
+
+function RhythmIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-indigo-400"
+    >
+      <path d="M12 3v18" />
+      <path d="M8 7l4-4 4 4" />
+      <path d="M8 17l4 4 4-4" />
     </svg>
   );
 }

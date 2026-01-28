@@ -137,6 +137,16 @@ export interface SongSection {
   bars?: number; // Number of bars/measures
 }
 
+// Strumming style characteristics
+export type StrummingStyle =
+  | 'straight'       // Even strumming
+  | 'swing'          // Swung eighth notes
+  | 'fingerpicking'  // Fingerstyle patterns
+  | 'arpeggiated'    // Broken chords
+  | 'palm-muted'     // Muted driving rhythm
+  | 'reggae'         // Offbeat emphasis
+  | 'latin';         // Syncopated patterns
+
 // Mood analysis result from algorithmic generator
 export interface MoodAnalysis {
   preferredMode: 'major' | 'minor';
@@ -153,6 +163,10 @@ export interface MoodAnalysis {
   positivity: number; // -1 to 1
   intensity: number;  // 0 to 1
   detectedKeywords?: string[]; // Keywords found in mood text
+  // Strumming characteristics
+  strummingStyle?: StrummingStyle;
+  rhythmComplexity?: 'simple' | 'moderate' | 'complex';
+  suggestedTimeSignature?: { beats: number; value: number };
 }
 
 // Detail level for educational content
@@ -169,6 +183,7 @@ export interface Song {
   customMood?: string; // User-entered mood description
   generatedBy?: 'preset' | 'ai';
   moodAnalysis?: MoodAnalysis; // Analysis data for educational explanations
+  rhythmGuidance?: RhythmGuidance; // Suggested strumming patterns
 }
 
 // AI generation request
@@ -183,4 +198,48 @@ export interface AIGenerationRequest {
 export interface AIGenerationResponse {
   song: Song;
   explanation?: string;
+}
+
+// ============================================================================
+// STRUMMING PATTERNS
+// ============================================================================
+
+// Individual beat in a strumming pattern
+export type StrumDirection = 'D' | 'U' | 'x' | '-'; // Down, Up, Muted, Rest
+
+export interface StrumBeat {
+  direction: StrumDirection;
+  accent?: boolean;  // Emphasized beat
+  tie?: boolean;     // Tied to previous beat (let ring)
+}
+
+// Time signature
+export interface TimeSignature {
+  beats: number;     // Numerator (beats per measure)
+  value: number;     // Denominator (note value getting one beat)
+}
+
+// Complete strumming pattern
+export interface StrummingPattern {
+  id: string;
+  name: string;
+  description: string;
+  timeSignature: TimeSignature;
+  pattern: StrumBeat[];          // One measure of strumming
+  subdivisions: 4 | 8 | 16;      // How fine the pattern is divided
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  genres: string[];              // Associated genres
+  tempoRange: { min: number; max: number };
+  tips: string[];                // Playing tips
+}
+
+// Rhythm guidance for a song/section
+export interface RhythmGuidance {
+  primaryPattern: StrummingPattern;
+  alternativePatterns?: StrummingPattern[];
+  explanation: {
+    beginner: string;
+    intermediate: string;
+    advanced: string;
+  };
 }
